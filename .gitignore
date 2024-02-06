@@ -1,0 +1,6 @@
+/out
+/dist
+/gen_dist
+run_build.command
+run_generate.command
+run_example_plugin.command

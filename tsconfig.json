@@ -1,0 +1,10 @@
+{
+    "files": ["generate.ts"],
+    "exclude": ["./v0/**", "./gen_dist/**"],
+    "lib": [ "dom", "es5", "es2015.promise" ,"es2015", "es2017"],
+    "compilerOptions": {
+        "outDir": "./gen_dist",
+        "downlevelIteration": true,
+        "rootDir": "."
+      }   
+}
