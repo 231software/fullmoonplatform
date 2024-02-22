@@ -37,7 +37,8 @@ const platforms_featuers=new Map([
     [
         "nodejs",{
             isNodeJS:true,
-            lib:"nolib"
+            lib:"nolib",
+            tstarget:undefined
         },
     ],
     [
@@ -47,7 +48,8 @@ const platforms_featuers=new Map([
                 "sqlite3",
                 "better-sqlite3"
             ],
-            lib:"nolib"
+            lib:"nolib",
+            tstarget:undefined
         }        
     ],
     [
@@ -63,7 +65,8 @@ const platforms_featuers=new Map([
                 "sqlite3",
                 "better-sqlite3"
             ],
-            lib:"nolib"
+            lib:"nolib",
+            tstarget:"es2022"
         }        
     ],
     [
@@ -135,8 +138,8 @@ for(let platform of supported_platforms){
             rootDir: ".",
             resolveJsonModule: true,
             downlevelIteration: true,
-            target: "ES2016",
-            moduleResolution: "node" ,
+            target: platform_features?.tstarget,
+            moduleResolution: "node",
             // https://www.jianshu.com/p/359c71344084
             forceConsistentCasingInFileNames:false
         }
@@ -146,7 +149,7 @@ for(let platform of supported_platforms){
     FMPFile.forceWrite("index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
     import {ScriptDone} from "./lib/index.js";
-    ${platform=="NodeJS"?"ScriptDone()":""};
+    ${platform=="NodeJS"?"ScriptDone();":""}
     export function main(){
         ScriptDone();
     }
@@ -162,8 +165,7 @@ for(let platform of supported_platforms){
         const npm_package:any={
             name:plugin_conf.name,
             main:"index.js",
-            description:plugin_conf.description,
-            type:"module"
+            description:plugin_conf.description
         };
         //处理各平台无法运行的包
         if(plugin_conf.dependencies){
