@@ -154,6 +154,17 @@ for(let platform of supported_platforms){
         ScriptDone();
     }
     `)
+    //写入plugin_info.ts
+    let data_path=plugin_conf.data_path
+    switch(platform){
+        case "llse":
+        case "lse":
+        case "ls":data_path="plugins/"+data_path;break;
+    }
+    FMPFile.forceWrite("lib/plugin_info.ts",`
+export let INFO=JSON.parse(\`${JSON.stringify(plugin_conf)}\`)
+export let data_path="${data_path}"
+    `);
     //执行编译命令
     const task=child_process.spawnSync("tsc")
     FMPLogger.info(task.stdout.toString())
@@ -183,7 +194,8 @@ for(let platform of supported_platforms){
         //最后写入这个package.json
         FMPFile.forceWrite(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/package.json",JSON.stringify(npm_package,undefined,4))
     }
-
+    //删除index.ts
+    FMPFile.permanently_delete("index.ts");
     //删除tsconfig.json
     FMPFile.permanently_delete("tsconfig.json");
     //最后将这个复制过来的lib删除
