@@ -149,7 +149,7 @@ for(let platform of supported_platforms){
     FMPFile.forceWrite("index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
     import {ScriptDone} from "./lib/index.js";
-    ${platform=="NodeJS"?"ScriptDone();":""}
+    ${platform=="nodejs"?"ScriptDone();":""}
     export function main(){
         ScriptDone();
     }
