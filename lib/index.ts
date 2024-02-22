@@ -1,3 +1,3 @@
-export {Player} from "./Game/Player.js"
-export {Logger} from "./Logger.js";
-export {File,Directory} from "./File.js"
+export  {FMPLogger} from "./Logger.js";
+export {FMPFile,FMPDirectory} from "./File.js"
+export { FMPPlayer } from "./Game/Player.js";

@@ -4,3 +4,4 @@
 run_build.command
 run_generate.command
 run_example_plugin.command
+.DS_Store

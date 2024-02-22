@@ -1,2 +1,2 @@
-import { Logger } from "../lib/index.js";
-Logger.info("This Full Moon Platform plugin successfully loaded.");
+import { FMPLogger } from "../lib/index.js";
+FMPLogger.info("This Full Moon Platform plugin successfully loaded.");
