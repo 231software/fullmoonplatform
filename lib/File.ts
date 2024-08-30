@@ -9,6 +9,11 @@ export class FMPFile{
             FMPLogger.error(e);
         }
     }
+    /**
+     * 新建文件夹  
+     * 如果当前目录已有同名文件夹，则不执行任何操作
+     * @param path 要新建的文件夹的路径，如果要在程序当前工作目录下新建，直接传入文件夹名即可
+     */
     static initDir(path:string){
         try{
             fs.readdirSync(path);
@@ -17,12 +22,17 @@ export class FMPFile{
             fs.mkdirSync(path);
         }
     }
+    /**
+     * 新建文件夹  
+     * 如果当前目录已有同名文件夹，则不执行任何操作
+     * @param path 要新建的文件夹的路径，如果要在程序当前工作目录下新建，直接传入文件夹名即可
+     */
     static initFile(path:string){
         try{
             fs.readFileSync(path)
         }
         catch(e){
-            
+            //新建文件逻辑未完成
         }
     }
     static read(path:string):string{
@@ -41,6 +51,12 @@ export class FMPFile{
             FMPLogger.error(e)
         }
     }
+    /**
+     * 强制向文件内写入文本内容，无视其中是否有内容、格式是否为文本文件  
+     * 请不要依赖此API对所有文件执行写入操作，由于写入时没有判断，操作不当可能会造成数据丢失或程序运行出现错误
+     * @param path 要写入的文件的路径
+     * @param content 要写入的内容
+     */
     static forceWrite(path:string,content:string){
         const target=fs.openSync(path,"w+");
         fs.writeFileSync(path,content);

@@ -33,6 +33,7 @@ lib就是这个模板库
  */
 import {FMPDirectory, FMPFile, FMPLogger} from "./lib/index.js"
 import * as child_process from "child_process";
+/** 各平台的配置文件，将来需要独立出去，因为需要供其他开发者修改 */
 const platforms_featuers=new Map([
     [
         "nodejs",{
@@ -91,6 +92,7 @@ const platforms_featuers=new Map([
 ])
 FMPLogger.info("开始构建")
 //读取plugin.json
+/**插件的配置文件，来自`plugin.json` */
 const plugin_conf=JSON.parse(FMPFile.read("plugin.json"));
 //根据plugin.json创建输出文件夹
 FMPFile.initDir(plugin_conf.build_dir);
