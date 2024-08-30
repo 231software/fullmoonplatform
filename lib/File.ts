@@ -6,7 +6,8 @@ export class FMPFile{
             return fs.readdirSync(path)
         }
         catch(e){
-            FMPLogger.error(e);
+            //FMPLogger.error(e);
+            throw new Error("无法列出"+path+"中的文件！\nnodejs报错：\n"+e)
         }
     }
     /**
@@ -40,7 +41,7 @@ export class FMPFile{
             return fs.readFileSync(path).toString();
         }
         catch(e){
-            FMPLogger.error(e);
+            //FMPLogger.error(e);
         }
     }
     static copy(source:string,destination:string){
@@ -73,7 +74,8 @@ export class FMPFile{
             fs.renameSync(path,target);
         }
         catch(e){
-            FMPLogger.error(e);
+            //FMPLogger.error(e);
+            throw new Error("移动文件时出现异常！\nnodejs报错：\n"+e)
         }
     }
     /**

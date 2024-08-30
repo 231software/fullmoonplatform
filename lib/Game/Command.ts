@@ -27,6 +27,8 @@ export class FMPCommandEnum{
     name:string;
     values:Array<string>;
     constructor(name:string,values:Array<string>){
+        this.name=name;
+        this.values=values;
     }
 }
 export enum FMPCommandEnumOptions{
@@ -47,6 +49,11 @@ export class FMPCommandParam{
         bindEnum:FMPCommandEnum|undefined=undefined,
         enumOptions:FMPCommandEnumOptions=FMPCommandEnumOptions.Default
     ){
+        this.type=type;
+        this.name=name;
+        this.dataType=dataType;
+        this.bindEnum=bindEnum;
+        this.enumOptions=enumOptions;
     }
 }
 export enum FMPCommandExecutorType{
@@ -84,12 +91,12 @@ export abstract class FMPCommand{
     flag:any;
     /**
      * 
-     * @param name 
-     * @param description 
-     * @param usageMessage 
-     * @param args 
-     * @param overloads 
-     * @param permission 
+     * @param name 命令名称，是要在控制台输入的那个，比如tp，say
+     * @param description 命令描述，一般可以通过/help命令显示出来
+     * @param usageMessage 如果指令格式有误，游戏会向玩家发送这个消息
+     * @param args 所有要用到的命令的参数，有几个就写几个，没有顺序之分，具体如何排列要取决于重载
+     * @param overloads 命令的重载，把你的命令参数用数组排列，每个数组是命令的一种用法
+     * @param permission 执行命令需要的权限
      * @param aliases 对于LLSE，由于只支持一个别名，所以仅有数组最后一个元素会作为该唯一的别名。
      * @param flag 
      */
@@ -103,8 +110,21 @@ export abstract class FMPCommand{
         aliases:Array<string>=[],
         flag:any=undefined
     ){
+        this.name=name;
+        this.description=description;
+        this.usageMessage=usageMessage;
+        this.args=args;
+        this.overloads=overloads;
+        this.permission=permission;
+        this.aliases=aliases;
+        this.flag=flag;
     }
     abstract callback(result:FMPCommandResult):void
+    /**
+     * 注册命令
+     * @param command 要注册的命令对象，建议现场new一个传进去
+     * @returns 命令是否注册成功
+     */
     static register<T extends FMPCommand>(command:T):boolean{
         return false;
     }

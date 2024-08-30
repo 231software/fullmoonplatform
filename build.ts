@@ -99,7 +99,12 @@ FMPFile.initDir(plugin_conf.build_dir);
 //为各平台整理库
 //创建temp文件夹并将原开发辅助lib放入temp
 FMPFile.initDir("temp");
-FMPFile.rename("lib","temp/lib");
+try{
+    FMPFile.rename("lib","temp/lib");
+}
+catch(e){
+    FMPLogger.warn("找不到原开发辅助文件夹lib！\n错误原因：\n"+e)
+}
 //在temp中创建libs文件夹，放置整理好用于编译的文件夹
 FMPFile.initDir("temp/libs")
 //（临时方案）直接把plugin.json中priorities项default指定的库中的支持平台定为插件支持的平台
@@ -115,9 +120,19 @@ switch(plugin_conf.supported_platforms.mode){
 let supported_platforms:string[]=[];
 if(!plugin_conf.priorities.default){
     FMPLogger.info("插件没有配置默认库，所有未指定默认库的库文件都将不会用于编译。");
+    FMPLogger.info("如果这是您刚刚配置完成的满月平台项目，请在plugin.json的priorities中新建default项，并配置一些项目默认使用用来编译的库");
 }
 else{
-    for(let platform of FMPFile.ls("libs/"+plugin_conf.priorities.default[0]+"/libs")){
+    const platforms=(()=>{
+        try{
+            return FMPFile.ls("libs/"+plugin_conf.priorities.default[0]+"/libs");
+        }
+        catch(e){
+            FMPLogger.error("无法获取库"+plugin_conf.priorities.default[0]+"中支持平台列表\n错误原因：\n"+e)
+            return []
+        }
+    })()
+    for(let platform of platforms){
         supported_platforms=supported_platforms.concat(platform);
         //（临时方案）按照支持平台整理库文件时，按plugin.json中priorities项default指定的库直接复制
         FMPFile.copy("libs/"+plugin_conf.priorities.default[0]+"/libs","temp/libs");
@@ -126,9 +141,9 @@ else{
 //整理完成，遍历所有平台开始编译
 for(let platform of supported_platforms){
     //跳过各操作系统为目录生成的文件
-    if(platform==".DS_Store")continue;
+    if(platform==".DS_Store"||platform==".desktop.ini")continue;
     const platform_features=platforms_featuers.get(platform);
-    FMPLogger.info(platform)
+    FMPLogger.info("正在为"+platform+"平台构建")
     FMPFile.copy("temp/libs/"+platform+"/lib","lib");
     //写入tsconfig.json
     const tsconfig:any={
