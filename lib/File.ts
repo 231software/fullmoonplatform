@@ -24,8 +24,8 @@ export class FMPFile{
         }
     }
     /**
-     * 新建文件夹  
-     * 如果当前目录已有同名文件夹，则不执行任何操作
+     * 新建文件  
+     * 如果当前目录已有同名文件，则不执行任何操作
      * @param path 要新建的文件夹的路径，如果要在程序当前工作目录下新建，直接传入文件夹名即可
      */
     static initFile(path:string){
@@ -33,7 +33,11 @@ export class FMPFile{
             fs.readFileSync(path)
         }
         catch(e){
-            //新建文件逻辑未完成
+            fs.openSync(path,"a"/*(e: NodeJS.ErrnoException | null, fd: number):void=>{
+                FMPLogger.info(fd)
+                fs.close(fd,()=>{})
+                if(e)FMPLogger.info("新建文件的过程中，无法关闭文件，错误消息为：\n"+e)
+            }*/)
         }
     }
     /**
@@ -138,8 +142,11 @@ export class JsonFile{
     constructor(path:string,objpath:string[]=[]){
         //先把文件建出来
         FMPFile.initFile(path);
+        //如果文件中事先没有内容，先在文件中写上一个大括号来保证后续顺利读取
+        if(FMPFile.read(path).length==0)FMPFile.forceWrite(path,"{}");
         this.path=path;
         this.objpath=objpath
+        this.rootobj=JSON.parse(FMPFile.read(path));
         if(objpath.length!=0){
             const checkObjAvailable=(checkPath:any,index:number)=>{
                 if(index>objpath.length-1){return;}
@@ -164,8 +171,12 @@ export class JsonFile{
      * @param value 键值
      */
     init(key:string,value:any){//重写只能放构造里面，放别的地方不行，我也不知道为啥
+        if(this.get(key)===undefined){
+            this.set(key,value);
+        }
+        /*
         if(this.objpath.length==0){
-                      
+            
         }
         else{
             let set=this.set//由于this.set传不进去initValue，所以在这里单独声明一个变量接力一下
@@ -173,7 +184,7 @@ export class JsonFile{
             if(get(key)===undefined){
                 set(key,value)
             }
-        }
+        }*/
     }
     /**
      * 通过递归读取目标的值
@@ -214,22 +225,26 @@ export class JsonFile{
      */
     set(key:string,value:any){//set之后要把rootobj重新生成一下
         let result=true;
+        let objpath=this.objpath
+        let rootobj=this.rootobj
+        let path=this.path;
         if(this.objpath.length==0)setRoot(key,value)
         else{
-            let root=this.rootobj[this.objpath[0]];
             //log("输入set的："+JSON.stringify(setValue(rootobj,0,value)))
             //log(JSON.stringify(setValue(rootobj[objpath[0]],0,value)))
             result=setRoot(this.objpath[0],setValue(this.rootobj[this.objpath[0]],0,value));                
         }
         function setRoot(key:string,value:any):boolean{
-            this.rootobj[key]=value
-            FMPFile.forceWrite(this.path,JSON.stringify(this.rootobj));
+            //注意，这个函数里面没有this，所有的this的属性都要传进来才能用
+            rootobj[key]=value
+            FMPFile.forceWrite(path,JSON.stringify(rootobj,undefined,4));
             return true;
         }
         function setValue(obj:any,index:number,value:any){
+            //注意，这个函数里面没有this，所有的this的属性都要传进来才能用
             //log(objpath[index])
             //log(obj)
-            if(index>=this.objpath.length-1){
+            if(index>=objpath.length-1){
                 let write=obj;
                 //let shell;shell[objpath[0]]=fatherGet;
                 write[key]=value;
@@ -237,7 +252,7 @@ export class JsonFile{
             }                
             else{//obj[objpath[index]]是传进去的，要被修改的部分
                 let write=obj;
-                write[this.objpath[index+1]]=setValue(obj[this.objpath[index+1]],index+1,value)
+                write[objpath[index+1]]=setValue(obj[objpath[index+1]],index+1,value)
                 //log(JSON.stringify(write,0,4))
                 return write
             }
