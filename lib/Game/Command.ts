@@ -80,24 +80,84 @@ export class FMPCommandResult{
         this.params=params
     }
 }
+/**
+ * Minecraft格式的命令
+ */
 export abstract class FMPCommand{
     name:string;
+    /** 
+     */
     description:string|undefined;
+    /**
+     */
     usageMessage:string|undefined;
+    /** 
+     */
     args:Array<FMPCommandParam>;
     overloads:Array<Array<string>>;
+    /**
+     */
     permission:FMPInternalPermission;
+    /**
+     */
     aliases:Array<string>;
     flag:any;
     /**
      * 
-     * @param name 命令名称，是要在控制台输入的那个，比如tp，say
-     * @param description 命令描述，一般可以通过/help命令显示出来
-     * @param usageMessage 如果指令格式有误，游戏会向玩家发送这个消息
-     * @param args 所有要用到的命令的参数，有几个就写几个，没有顺序之分，具体如何排列要取决于重载
-     * @param overloads 命令的重载，把你的命令参数用数组排列，每个数组是命令的一种用法
-     * @param permission 执行命令需要的权限
-     * @param aliases 对于LLSE，由于只支持一个别名，所以仅有数组最后一个元素会作为该唯一的别名。
+     * @param name 
+     * 命令名称，为执行命令时开头的字段  
+     * 例如要注册warp命令
+     * 这里传入`warp`即可  
+     * 然后用户在游戏内或控制台输入时  
+     * 输入`warp ...`即可
+     * @param description 
+     * 命令描述  
+     * 在Minecraft中  
+     * 一般执行`/help 指令名`就会显示对应指令的该信息
+     * @param usageMessage 
+     * 指令用法  
+     * 在Minecraft中  
+     * 一般在输入命令的格式错误（如缺少参数或参数类型不正确）时显示对应指令的该信息
+     * @param args 
+     * 指令参数  
+     * 该指令中所有可能出现的参数  
+     * 例如你要注册的`warp`指令有以下几种用法：  
+     * ```
+     * warp 传送点名（字符串类型）
+     * ```
+     * ```
+     * warp 目标玩家（玩家类型） 传送点名（字符串类型）
+     * ```
+     * 那么你的命令一共包括传送点名和目标玩家两个参数
+     * 传入的顺序无所谓，因为具体如何排列这些参数将在指令重载过程中决定
+     * @param overloads 
+     * 指令重载  
+     * 在此处决定你将如何排列这些参数  
+     * 对于传入的二维数组  
+     * 每一行为一个重载  
+     * 例如你要注册的`warp`指令有以下几种用法：  
+     * ```
+     * warp 传送点名（字符串类型）
+     * ```
+     * ```
+     * warp 目标玩家（玩家类型） 传送点名（字符串类型）
+     * ```
+     * 那么你的命令将需要按以下格式传入参数：
+     * ```
+     * [
+     *     [传送点名]
+     *     [目标玩家,传送点名]
+     * ]
+     * ```
+     * @param permission 
+     * 执行命令所需权限
+     * 命令只能被传入的权限等级及高于传入的权限等级的执行者执行
+     * @param aliases 
+     * 指令别名
+     * 你的指令将由一个主名称和数个别名组成
+     * 例如，你为`warp`指令注册了别名`go`
+     * 那么玩家执行`go`命令的时候，实际上是执行了`warp`命令
+     * <!--对于LLSE，由于只支持一个别名，LNSDK只支持将最后一个元素作为别名-->
      * @param flag 
      */
     constructor(

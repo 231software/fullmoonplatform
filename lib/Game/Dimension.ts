@@ -1,8 +1,8 @@
 export enum FMPDefaultDimension{
+    NotDefault=-1,
     Overworld=0,
     Nether,
-    TheEnd,
-    NotDefault
+    TheEnd
 }
 export class FMPDimension{
     dimid:number;

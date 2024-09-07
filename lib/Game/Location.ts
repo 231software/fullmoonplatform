@@ -37,9 +37,26 @@ export class FMPLocation{
         return 0;
     }
     get dimension():FMPDimension{
-        return new FMPDimension
+        return new FMPDimension();
     }
     static new(x:number,y:number,z:number,dimension:FMPDimension=FMPDimension.getDefaultDimension(0)):FMPLocation{
         return new FMPLocation(x,y,z,dimension);
+    }
+}
+export class FMPEulerAngles{
+    rawangle:any;
+    constructor(alpha:number,beta:number,gamma:number){
+    }
+    get alpha():number{
+        return 0;
+    }
+    get beta():number{
+        return 0;
+    }
+    get gamma():number{
+        return 0;
+    }
+    static new(alpha:number,beta:number,gamma:number):FMPEulerAngles{
+        return new FMPEulerAngles(alpha,beta,gamma);
     }
 }
