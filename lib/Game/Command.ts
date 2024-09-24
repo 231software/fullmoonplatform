@@ -74,10 +74,28 @@ export class FMPCommandExecutor{
 }
 export class FMPCommandResult{
     executor:FMPCommandExecutor
-    params:any
-    constructor(executor:FMPCommandExecutor,params:any){
+    params:Map<string,{param:FMPCommandParam,value:any}>
+    constructor(executor:FMPCommandExecutor,params:Map<string,{param:FMPCommandParam,value:any}>){
         this.executor=executor
         this.params=params
+    }
+}
+/**命令执行失败的原因 */
+export enum FMPCommandFailReason{
+    Success,
+    UnknownCommand,
+    WrongTypeOfArgument,
+    NoTargetMatchedSelector,
+    InternalServerError,
+}
+export function FMPCommandFailReasonText(reason:FMPCommandFailReason):string{
+    switch(reason){
+        case FMPCommandFailReason.Success:return "成功"
+        case FMPCommandFailReason.UnknownCommand:return "未知命令"
+        case FMPCommandFailReason.WrongTypeOfArgument:return "参数输入有误"
+        case FMPCommandFailReason.NoTargetMatchedSelector:return "没有与目标选择器匹配的目标"
+        default:
+        case FMPCommandFailReason.InternalServerError:return "执行命令时插件因自身错误而无法执行"
     }
 }
 /**
@@ -93,7 +111,7 @@ export abstract class FMPCommand{
     usageMessage:string|undefined;
     /** 
      */
-    args:Array<FMPCommandParam>;
+    args:Map<string,FMPCommandParam>=new Map();
     overloads:Array<Array<string>>;
     /**
      */
@@ -173,7 +191,7 @@ export abstract class FMPCommand{
         this.name=name;
         this.description=description;
         this.usageMessage=usageMessage;
-        this.args=args;
+        for(let param of args)this.args.set(param.name,param)
         this.overloads=overloads;
         this.permission=permission;
         this.aliases=aliases;

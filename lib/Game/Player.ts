@@ -30,6 +30,13 @@ export class FMPPlayer{
     get direction():FMPEulerAngles{
         return FMPEulerAngles.new(0,0,0)
     }
+    /**
+     * 在游戏内向玩家发送一条消息，没有任何前缀
+     * @returns 是否发送成功
+     */
+    tell(message:string):boolean{
+        return false;
+    }
     /** 在游戏世界中传送玩家到指定坐标 */
     teleport(location:FMPLocation,direction?:FMPEulerAngles):boolean{
         return false;
