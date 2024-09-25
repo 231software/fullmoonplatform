@@ -20,7 +20,18 @@ export class FMPFile{
             fs.readdirSync(path);
         }
         catch(e){
-            fs.mkdirSync(path);
+            try{
+                fs.mkdirSync(path);
+            }
+            catch(e){
+                //如果创建失败，他会去掉最后一个文件夹后重新尝试创建
+                FMPLogger.warn("文件夹创建失败！原因："+e)
+                FMPLogger.info("尝试从上一层文件夹开始创建")
+                const dir=new FMPDirectory(path);
+                dir.folders.pop()//去掉最后一个文件夹
+                FMPFile.initDir(dir.toString())//尝试初始化外面一层的文件夹，如果这层失败了，他会递归回到上面那里再去掉一层文件夹
+                FMPFile.initDir(path)
+            }
         }
     }
     /**

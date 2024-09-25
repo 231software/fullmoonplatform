@@ -28,7 +28,8 @@ export {
 export {FMPInternalPermission as InternalPermission} from "./Game/InternalPermission.js"
 export {
     FMPSimpleForm as SimpleForm,
-    FMPSimpleFormButton as SimpleFormButton
+    FMPSimpleFormButton as SimpleFormButton,
+    FMPSimpleFormSession as SimpleFormSession
 } from "./SimpleForm.js"
 export {FMPInitEvent as InitEvent} from "./Events/Process.js"
 export {FMPPlayerToggleSneakEvent as PlayerToggleSneakEvent,FMPPlayerJoinEvent as PlayerJoinEvent} from "./Events/Player.js"
