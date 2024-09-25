@@ -84,9 +84,19 @@ export class FMPSimpleFormSession{
     form:FMPSimpleForm
     player:FMPPlayer
     lastSession:FMPSimpleFormSession
+    /**
+     * 
+     * @param form 当前会话对应的表单
+     * @param lastSessionOrPlayer 如果当前会话是由其他表单跳转过来的，就传入跳转的源头  
+     * 否则就传入当前会话对应的玩家  
+     * 如果是跳转过来的但是不想返回，直接传入玩家即可。通常从跳转过来的会话中取出玩家传入即可
+     */
     constructor(form:FMPSimpleForm,lastSessionOrPlayer:FMPSimpleFormSession|FMPPlayer){
         /**为了防止后续对原始表单的修改导致全局的表彰发生变化，就在这里把原表单的按钮列表拷贝一份*/
-        const originalFormButtons=form.buttons
+        const originalFormButtons:FMPSimpleFormButton[]=[];
+        for(let button of form.buttons){
+            originalFormButtons.push(button);
+        }
         //传入了表单会话，指明了跳转来源，就可以使用这个跳转来源进行后退操作了。
         if(lastSessionOrPlayer instanceof FMPSimpleFormSession){
             this.lastSession=lastSessionOrPlayer

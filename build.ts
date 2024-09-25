@@ -140,8 +140,18 @@ else{
 }
 //整理完成，遍历所有平台开始编译
 for(let platform of supported_platforms){
+    compileSpecifiedPlatform(platform)
+}
+
+//将lib放回原位
+File.rename("temp/lib","lib");
+//删除temp
+File.permanently_delete("temp")
+Logger.info("构建完成")
+
+function compileSpecifiedPlatform(platform:string){
     //跳过各操作系统为目录生成的文件
-    if(platform==".DS_Store"||platform==".desktop.ini")continue;
+    if(platform==".DS_Store"||platform==".desktop.ini")return;
     const platform_features=platforms_featuers.get(platform);
     Logger.info("正在为"+platform+"平台构建")
     File.copy("temp/libs/"+platform+"/lib","lib");
@@ -218,9 +228,3 @@ export let data_path="${data_path}"
     //最后将这个复制过来的lib删除
     File.permanently_delete("lib")
 }
-
-//将lib放回原位
-File.rename("temp/lib","lib");
-//删除temp
-File.permanently_delete("temp")
-Logger.info("构建完成")

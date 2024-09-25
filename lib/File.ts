@@ -271,6 +271,47 @@ export class JsonFile{
         this.reload();
         return result;
     }
+    delete(key:string):boolean{
+        let result=true;
+        let objpath=this.objpath
+        let rootobj=this.rootobj
+        let path=this.path;
+        if(this.objpath.length==0){
+            delete rootobj[key]
+            FMPFile.forceWrite(path,JSON.stringify(rootobj,undefined,4));
+            return true;
+        }
+        else{
+            //log("输入set的："+JSON.stringify(setValue(rootobj,0,value)))
+            //log(JSON.stringify(setValue(rootobj[objpath[0]],0,value)))
+            result=setRoot(this.objpath[0],deleteValue(this.rootobj[this.objpath[0]],0));                
+        }
+        function setRoot(key:string,value:any):boolean{
+            //注意，这个函数里面没有this，所有的this的属性都要传进来才能用
+            rootobj[key]=value
+            FMPFile.forceWrite(path,JSON.stringify(rootobj,undefined,4));
+            return true;
+        }
+        function deleteValue(obj:any,index:number){
+            //注意，这个函数里面没有this，所有的this的属性都要传进来才能用
+            //log(objpath[index])
+            //log(obj)
+            if(index>=objpath.length-1){
+                let write=obj;
+                //let shell;shell[objpath[0]]=fatherGet;
+                delete write[key];
+                return write;
+            }                
+            else{//obj[objpath[index]]是传进去的，要被修改的部分
+                let write=obj;
+                write[objpath[index+1]]=deleteValue(obj[objpath[index+1]],index+1)
+                //log(JSON.stringify(write,0,4))
+                return write
+            }
+        } 
+        this.reload();
+        return result;
+    }
     reloadroot():boolean{
         this.fileContent=FMPFile.read(this.path)
         this.rootobj=JSON.parse(this.fileContent);
@@ -292,6 +333,7 @@ export class JsonFile{
             return this.getAllKeys(obj[this.objpath[index]],index+1)
         }
     }        
+    /**获取所有的键名 */
     keys():string[]{
         return this.getAllKeys(this.rootobj);//Object.keys(rootobj);
     }

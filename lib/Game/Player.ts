@@ -1,3 +1,4 @@
+import { FMPInternalPermission } from "./InternalPermission";
 import { FMPEulerAngles, FMPLocation } from "./Location";
 /**
  * FMP定义的游戏模式  
@@ -25,10 +26,16 @@ export class FMPPlayer{
     /** 玩家在游戏世界中的坐标 */
     location:FMPLocation
     /** 玩家的游戏模式 */
-    gameMode:FMPGameMode
+    get gameMode():FMPGameMode{
+        return FMPGameMode.Unknown
+    }
     /** 获取玩家在游戏世界中的朝向 */
     get direction():FMPEulerAngles{
         return FMPEulerAngles.new(0,0,0)
+    }
+    /**玩家对于游戏内置权限的权限等级 */
+    get internalPermission():FMPInternalPermission{
+        return FMPInternalPermission.Any
     }
     /**
      * 在游戏内向玩家发送一条消息，没有任何前缀
