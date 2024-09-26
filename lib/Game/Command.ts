@@ -207,3 +207,9 @@ export abstract class FMPCommand{
         return false;
     }
 }
+export function FMPruncmd(cmd:string):{success:boolean,output:string}{
+    return {
+        success:false,
+        output:"当前功能未开发完毕，无法执行命令"
+    }
+}
