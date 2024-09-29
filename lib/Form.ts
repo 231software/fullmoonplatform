@@ -8,7 +8,6 @@ import { FMPSQLDBDataType } from "./SQLite3.js";
 export abstract class FMPForm{
     title:string
     content:string
-    onClose:(session:FMPSimpleFormSession|FMPCustomFormSession|FMPModalFormSession)=>void
     //这里传入的any证明表单回调接收到的表单会话参数中上个会话可以是任何类型
     abstract send(formSession:FMPFormSession):boolean
     constructor(
@@ -18,7 +17,6 @@ export abstract class FMPForm{
     ){
         this.title=title
         this.content=content
-        this.onClose=onClose
     }
 }
 /**
@@ -72,14 +70,16 @@ export abstract class FMPFormSession{
 
 export class FMPSimpleForm extends FMPForm{
     buttons:FMPSimpleFormButton[]=[]
+    onClose:(session:FMPSimpleFormSession)=>void
     /**
      * 
      * @param buttons 表单中的所有按钮
      * @param onClose 表单被关闭（点击叉）时要触发的函数
      * - session:玩家关闭一个表单时，其所关闭的具体表单会话
      */
-    constructor(title=" ",content="",buttons:FMPSimpleFormButton[]=[],onClose?:(session:FMPSimpleFormSession|FMPCustomFormSession|FMPModalFormSession)=>void) {
-        super(title,content,onClose)
+    constructor(title=" ",content="",buttons:FMPSimpleFormButton[]=[],onClose?:(session:FMPSimpleFormSession)=>void) {
+        super(title,content)
+        this.onClose=onClose!=undefined?onClose:(session)=>{};
         this.buttons=buttons;
         this.build();
     }
@@ -405,6 +405,7 @@ export class FMPModalForm extends FMPForm{
     onConfirm:(session:FMPModalFormSession)=>void
     backOnConfirm:boolean
     confirmButtonText:string
+    onCancel:(session:FMPModalFormSession)=>void
     backOnCancel:boolean
     cancelButtonText:string
     constructor(
@@ -417,12 +418,13 @@ export class FMPModalForm extends FMPForm{
         onCancel?:(session:FMPModalFormSession)=>void,
         backOnCancel:boolean=false
     ){
-        super(title,content,onCancel)
+        super(title,content)
         this.confirmButtonText=confirmButtonText
         this.cancelButtonText=cancelButtonText
         this.onConfirm=onConfirm
         this.backOnConfirm=backOnConfirm
         this.backOnCancel=backOnCancel
+        this.onCancel=onCancel!=undefined?onCancel:(session)=>{};
     }
     send(session:FMPModalFormSession):boolean{
         return false
@@ -445,12 +447,12 @@ export class FMPModalFormSession extends FMPFormSession{
             const onCancel:(session: FMPModalFormSession)=>void=form.backOnCancel?
             (session: FMPModalFormSession) =>{
                 //先执行原表单的处理提交按钮的方法
-                form.onClose(session)
+                form.onCancel(session)
                 //再向玩家发送跳转回去的表单
                 lastSessionOrPlayer.send()
             }
             :
-            form.onClose
+            form.onCancel
             super(new FMPModalForm(
                 form.title,
                 form.content,
