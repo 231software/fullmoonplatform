@@ -65,6 +65,11 @@ export class FMPFile{
             throw new Error("读取文件时发生错误！错误消息为：\n"+e);
         }
     }
+    /**
+     * 复制一个文件和文件夹
+     * @param source 要被复制的文件名文件夹
+     * @param destination 要复制到的目标
+     */
     static copy(source:string,destination:string){
         try{
             fs.cpSync(source,destination,{recursive:true});
@@ -271,6 +276,11 @@ export class JsonFile{
         this.reload();
         return result;
     }
+    /**
+     * 删除当前json对象的一个键
+     * @param key 要被删除的键
+     * @returns 是否成功删除
+     */
     delete(key:string):boolean{
         let result=true;
         let objpath=this.objpath
@@ -318,6 +328,11 @@ export class JsonFile{
         return true;
         //this.keys=this.getAllKeys(this.rootobj);
     }
+    /**
+     * 重载当前配置文件  
+     * JsonFile不会锁定文件或跟踪文件修改，因此如果用户或其他软件修改了文件，需要通过某种方式使当前插件调用这个reload刷新文件内容
+     * @returns 是否重载成功
+     */
     reload():boolean{
         return this.reloadroot();
     }
@@ -333,7 +348,9 @@ export class JsonFile{
             return this.getAllKeys(obj[this.objpath[index]],index+1)
         }
     }        
-    /**获取所有的键名 */
+    /**
+     * 获取所有的键名 
+     */
     keys():string[]{
         return this.getAllKeys(this.rootobj);//Object.keys(rootobj);
     }

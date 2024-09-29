@@ -350,45 +350,52 @@ export class FMPCustomFormStepSlider extends FMPCustomFormElements{
 }
 /**
  * 自定义表单被玩家提交后的结果表  
- * 该结果表继承了Map，要想获取所有元素名，请使用表达式`[...结果.keys()]`
  */
-export class FMPCustomFormResult extends Map<string,FMPCustomFormInput|FMPCustomFormDropdown|FMPCustomFormLabel|FMPCustomFormSlider|FMPCustomFormStepSlider|FMPCustomFormSwitch>{
+export class FMPCustomFormResult{
+    map:Map<string,FMPCustomFormInput|FMPCustomFormDropdown|FMPCustomFormLabel|FMPCustomFormSlider|FMPCustomFormStepSlider|FMPCustomFormSwitch>
     constructor(elements:(FMPCustomFormInput|FMPCustomFormDropdown|FMPCustomFormLabel|FMPCustomFormSlider|FMPCustomFormStepSlider|FMPCustomFormSwitch)[]){
-        super()
+        this.map=new Map()
         //ts继承map时似乎不允许直接向父类构造方法传入数据，只能挨个set了
+        //如果元素名和元素本体错位
         for(let element of elements){
-            this.set(element.name,element)
+            this.map.set(element.name,element)
         }
     }
     getInput(name:string):FMPCustomFormInput{
-        const element=this.get(name)
+        const element=this.map.get(name)
         if(element==undefined)throw new Error("未找到名为"+name+"的元素")
-        if(!(element instanceof FMPCustomFormInput))throw new Error("无法从表单中以CustomFormInput类型（输入框）获取"+name+"元素！该元素的实际类型为："+element.constructor.name)
+        if(!(element instanceof FMPCustomFormInput))throw new Error("无法从表单中以CustomFormInput类型（输入框）获取名为"+name+"的元素！该元素的实际类型为："+element.constructor.name)
         return element
     }
     getDropdown(name:string):FMPCustomFormDropdown{
-        const element=this.get(name)
+        const element=this.map.get(name)
         if(element==undefined)throw new Error("未找到名为"+name+"的元素")
-        if(!(element instanceof FMPCustomFormDropdown))throw new Error("无法从表单中以CustomFormDropDown类型（下拉菜单）获取"+name+"元素！该元素的实际类型为："+element.constructor.name)
+        if(!(element instanceof FMPCustomFormDropdown))throw new Error("无法从表单中以CustomFormDropDown类型（下拉菜单）获取名为"+name+"的元素！该元素的实际类型为："+element.constructor.name)
         return element
     }
     getSlider(name:string):FMPCustomFormSlider{
-        const element=this.get(name)
+        const element=this.map.get(name)
         if(element==undefined)throw new Error("未找到名为"+name+"的元素")
-        if(!(element instanceof FMPCustomFormSlider))throw new Error("无法从表单中以CustomFormSlider类型（滑块）获取"+name+"元素！该元素的实际类型为："+element.constructor.name)
+        if(!(element instanceof FMPCustomFormSlider))throw new Error("无法从表单中以CustomFormSlider类型（滑块）获取名为"+name+"的元素！该元素的实际类型为："+element.constructor.name)
         return element
     }
     getStepSlider(name:string):FMPCustomFormStepSlider{
-        const element=this.get(name)
+        const element=this.map.get(name)
         if(element==undefined)throw new Error("未找到名为"+name+"的元素")
-        if(!(element instanceof FMPCustomFormStepSlider))throw new Error("无法从表单中以CustomFormStepSlider类型（步进滑块）获取"+name+"元素！该元素的实际类型为："+element.constructor.name)
+        if(!(element instanceof FMPCustomFormStepSlider))throw new Error("无法从表单中以CustomFormStepSlider类型（步进滑块）获取名为"+name+"的元素！该元素的实际类型为："+element.constructor.name)
         return element
     }
     getSwitch(name:string):FMPCustomFormSwitch{
         const element=this.get(name)
         if(element==undefined)throw new Error("未找到名为"+name+"的元素")
-        if(!(element instanceof FMPCustomFormSwitch))throw new Error("无法从表单中以CustomFormSwitch（开关）类型获取"+name+"元素！该元素的实际类型为："+element.constructor.name)
+        if(!(element instanceof FMPCustomFormSwitch))throw new Error("无法从表单中以CustomFormSwitch（开关）类型获取名为"+name+"的元素！该元素的实际类型为："+element.constructor.name)
         return element
+    }
+    get(key:string):FMPCustomFormInput|FMPCustomFormDropdown|FMPCustomFormLabel|FMPCustomFormSlider|FMPCustomFormStepSlider|FMPCustomFormSwitch|undefined{
+        return this.map.get(key)
+    }
+    keys():string[]{
+        return [...this.map.keys()]
     }
 }
 

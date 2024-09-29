@@ -1,9 +1,10 @@
 
 export class FMPScoreboard{
     name:string
-    displayName:string
+    displayName:string|undefined
     constructor(name:string,displayName?:string){
-
+        this.name=name
+        this.displayName=displayName
     }
     get(playerName:string):number{
         return 0;
@@ -27,7 +28,7 @@ export class FMPScoreboard{
     static getObjective(name:string):FMPScoreboard|undefined{
         return undefined;
     }
-    static createObjective(name:string):boolean{
+    static createObjective(name:string,displayName?:string):boolean{
         return false
     }
     static removeObjective(name:string):boolean{

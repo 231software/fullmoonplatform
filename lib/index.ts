@@ -7,6 +7,11 @@ export {
 export { FMPPlayer as Player,FMPGameMode as GameMode} from "./Game/Player.js";
 export { FMPEntity as Entity,FMPDamageCause as DamageCause} from "./Game/Entity.js";
 export {
+    FMPItem as Item,
+    FMPSlot as Slot,
+    FMPToolItem
+} from "./Game/Item.js"
+export {
     FMPLocation as Location,
     FMPEulerAngles as EulerAngles
 } from "./Game/Location.js";
@@ -52,5 +57,8 @@ export {
     FMPSQLDBDataType as SQLDBDataType,
     FMPSQLComparisonOperators as SQLComparisonOperators
 } from "./SQLite3.js"
+export {
+    FMPCurrency as Currency
+} from "./Game/Economy.js"
 export {TwoWayMap} from "./Tools.js"
 export {ScriptDone} from "./Events/Process.js"

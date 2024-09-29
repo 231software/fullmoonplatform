@@ -1,5 +1,6 @@
 import { FMPInternalPermission } from "./InternalPermission";
 import { FMPEulerAngles, FMPLocation } from "./Location";
+import {FMPItem} from "./Item.js"
 /**
  * FMP定义的游戏模式  
  * 以Minecraft中的游戏模式为主，也可包括其他游戏中的游戏模式  
@@ -36,6 +37,14 @@ export class FMPPlayer{
     /**玩家对于游戏内置权限的权限等级 */
     get internalPermission():FMPInternalPermission{
         return FMPInternalPermission.Any
+    }
+    /**
+     * 给予玩家一个物品
+     * @param item 要给予玩家的物品
+     * @returns 是否成功给予玩家
+     */
+    giveItem(item:FMPItem):boolean{
+        return false
     }
     /**
      * 在游戏内向玩家发送一条消息，没有任何前缀
