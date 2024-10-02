@@ -26,6 +26,10 @@ export class FMPPlayer{
     displayName:string;
     /** 玩家在游戏世界中的坐标 */
     location:FMPLocation
+    /**玩家的UUID（Unique UID） */
+    get uuid():string{
+        return ""
+    }
     /** 玩家的游戏模式 */
     get gameMode():FMPGameMode{
         return FMPGameMode.Unknown

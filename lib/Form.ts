@@ -12,8 +12,7 @@ export abstract class FMPForm{
     abstract send(formSession:FMPFormSession):boolean
     constructor(
         title:string,
-        content:string,
-        onClose:(session:FMPSimpleFormSession|FMPCustomFormSession|FMPModalFormSession)=>void=()=>{}
+        content:string
     ){
         this.title=title
         this.content=content

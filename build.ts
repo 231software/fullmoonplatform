@@ -117,12 +117,14 @@ switch(plugin_conf.supported_platforms.mode){
         break;
 }
 //
-let supported_platforms:string[]=[];
+const supported_platforms:string[]=[];
 if(!plugin_conf.priorities.default){
     Logger.info("插件没有配置默认库，所有未指定默认库的库文件都将不会用于编译。");
     Logger.info("如果这是您刚刚配置完成的满月平台项目，请在plugin.json的priorities中新建default项，并配置一些项目默认使用用来编译的库");
 }
 else{
+    //尝试读取库中所有的文件夹，每个文件夹是一个平台
+    /**将库中每个文件夹都当作一个平台来整理出的所有当前库支持的平台的列表 */
     const platforms=(()=>{
         try{
             return File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs");
@@ -133,7 +135,7 @@ else{
         }
     })()
     for(let platform of platforms){
-        supported_platforms=supported_platforms.concat(platform);
+        supported_platforms.push(platform);
         //（临时方案）按照支持平台整理库文件时，按plugin.json中priorities项default指定的库直接复制
         File.copy("libs/"+plugin_conf.priorities.default[0]+"/libs","temp/libs");
     }
@@ -151,11 +153,67 @@ Logger.info("构建完成")
 
 function compileSpecifiedPlatform(platform:string){
     //跳过各操作系统为目录生成的文件
-    if(platform==".DS_Store"||platform==".desktop.ini")return;
+    if([".DS_Store",".desktop.ini","Thumb.db"].includes(platform))return;
     const platform_features=platforms_featuers.get(platform);
     Logger.info("正在为"+platform+"平台构建")
     File.copy("temp/libs/"+platform+"/lib","lib");
+
     //写入tsconfig.json
+    write_tsconfig(platform,platform_features)
+    
+    //写入index.ts
+    File.forceWrite("index.ts",`
+    import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
+    import {ScriptDone} from "./lib/index.js";
+    ${platform=="nodejs"?"ScriptDone();":""}
+    export function main(){
+        ScriptDone();
+    }
+    `)
+
+    //写入plugin_info.ts
+    write_plugin_info(platform)
+
+    //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
+    runLibScripts(platform,"before_compile.js")
+
+    //执行编译命令
+    const task=child_process.spawnSync("tsc")
+    Logger.info(task.stdout.toString())
+    if(task.stderr){
+        Logger.info(task.stderr.toString())
+    }
+
+    //写入package.json
+    write_package_json(platform,platform_features)
+
+    //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
+    runLibScripts(platform,"after_compile.js")
+    
+    //删除index.ts
+    File.permanently_delete("index.ts");
+    
+    //删除tsconfig.json
+    File.permanently_delete("tsconfig.json");
+
+    //最后将这个复制过来的lib删除
+    File.permanently_delete("lib")
+}
+
+function write_plugin_info(platform:string){
+    let data_path=plugin_conf.data_path
+    switch(platform){
+        case "llse":
+        case "lse":
+        case "ls":data_path="plugins/"+data_path;break;
+    }
+    File.forceWrite("lib/plugin_info.ts",`
+export let INFO=JSON.parse(\`${JSON.stringify(plugin_conf)}\`)
+export let data_path="${data_path}"
+    `);
+}
+
+function write_tsconfig(platform:string,platform_features:any){
     const tsconfig:any={
         //忽略libs
         exclude: ["./v0/**", "./dist/**","libs","build","temp"],
@@ -172,59 +230,42 @@ function compileSpecifiedPlatform(platform:string){
         }
     }
     File.forceWrite("tsconfig.json",JSON.stringify(tsconfig));
-    //写入index.ts
-    File.forceWrite("index.ts",`
-    import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
-    import {ScriptDone} from "./lib/index.js";
-    ${platform=="nodejs"?"ScriptDone();":""}
-    export function main(){
-        ScriptDone();
-    }
-    `)
-    //写入plugin_info.ts
-    let data_path=plugin_conf.data_path
-    switch(platform){
-        case "llse":
-        case "lse":
-        case "ls":data_path="plugins/"+data_path;break;
-    }
-    File.forceWrite("lib/plugin_info.ts",`
-export let INFO=JSON.parse(\`${JSON.stringify(plugin_conf)}\`)
-export let data_path="${data_path}"
-    `);
-    //执行编译命令
-    const task=child_process.spawnSync("tsc")
-    Logger.info(task.stdout.toString())
-    if(task.stderr){
-        Logger.info(task.stderr.toString())
-    }
+}
+
+/**写入package.json */
+function write_package_json(platform:string,platform_features:any){
     //如果当前平台有package.json，就根据plugin.json创建package.json
-    if(platform_features?.isNodeJS){
-        const npm_package:any={
-            name:plugin_conf.name,
-            main:"index.js",
-            description:plugin_conf.description
-        };
-        //处理各平台无法运行的包
-        if(plugin_conf.dependencies){
-            const dependencies=plugin_conf.dependencies;
-            if(platform_features.unsupported_packages){
-                for(let unsupported_package of platform_features.unsupported_packages){
-                    delete dependencies[unsupported_package];
-                }
-            }
-            //如果该平台不支持任何提供的包，直接不添加dependencies项以防出错
-            if(Object.keys(dependencies).length!=0){
-                npm_package.dependencies=dependencies;
+    if(!platform_features?.isNodeJS)return;
+    /**package.json的基础的内容 */
+    const npm_package:any={
+        name:plugin_conf.name,
+        main:"index.js",
+        description:plugin_conf.description
+    };
+    //处理各平台无法运行的包
+    if(plugin_conf.dependencies){
+        const dependencies=plugin_conf.dependencies;
+        if(platform_features.unsupported_packages){
+            for(let unsupported_package of platform_features.unsupported_packages){
+                delete dependencies[unsupported_package];
             }
         }
-        //最后写入这个package.json
-        File.forceWrite(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/package.json",JSON.stringify(npm_package,undefined,4))
+        //如果该平台不支持任何提供的包，直接不添加dependencies项以防出错
+        if(Object.keys(dependencies).length!=0){
+            npm_package.dependencies=dependencies;
+        }
     }
-    //删除index.ts
-    File.permanently_delete("index.ts");
-    //删除tsconfig.json
-    File.permanently_delete("tsconfig.json");
-    //最后将这个复制过来的lib删除
-    File.permanently_delete("lib")
+    //最后写入这个package.json
+    File.forceWrite(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/package.json",JSON.stringify(npm_package,undefined,4))
+}
+
+function runLibScripts(platform:string,file:string){
+    //这个外层的if是用于判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
+    if(File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts").includes(file)){
+        const AfterCompileScriptTask=child_process.spawnSync("node",["libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts/"+file])
+        Logger.info(AfterCompileScriptTask.stdout.toString())
+        if(AfterCompileScriptTask.stderr){
+            Logger.info(AfterCompileScriptTask.stderr.toString())
+        }
+    }
 }

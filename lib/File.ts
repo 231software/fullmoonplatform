@@ -362,3 +362,11 @@ export class JsonFile{
         return "0.0.1";
     }
 }
+
+export class XmlFile{
+
+}
+
+export class YmlFile{
+    
+}
