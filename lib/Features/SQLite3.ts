@@ -1,4 +1,4 @@
-import { FMPLogger } from "./Logger"
+import { FMPLogger } from "../Logger"
 
 /**
  * SQL数据类型枚举。  

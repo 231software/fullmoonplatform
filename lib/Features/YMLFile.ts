@@ -1,151 +1,12 @@
-import * as fs from "fs";
-import { FMPLogger } from "./Logger";
-export class FMPFile{
-    static ls(path:string):string[]{
-        try{
-            return fs.readdirSync(path)
-        }
-        catch(e){
-            //FMPLogger.error(e);
-            throw new Error("无法列出"+path+"中的文件！\nnodejs报错：\n"+e)
-        }
-    }
-    /**
-     * 新建文件夹  
-     * 如果当前目录已有同名文件夹，则不执行任何操作
-     * @param path 要新建的文件夹的路径，如果要在程序当前工作目录下新建，直接传入文件夹名即可
-     */
-    static initDir(path:string){
-        try{
-            fs.readdirSync(path);
-        }
-        catch(e){
-            try{
-                fs.mkdirSync(path);
-            }
-            catch(e){
-                //如果创建失败，他会去掉最后一个文件夹后重新尝试创建
-                FMPLogger.warn("文件夹创建失败！原因："+e)
-                FMPLogger.info("尝试从上一层文件夹开始创建")
-                const dir=new FMPDirectory(path);
-                dir.folders.pop()//去掉最后一个文件夹
-                FMPFile.initDir(dir.toString())//尝试初始化外面一层的文件夹，如果这层失败了，他会递归回到上面那里再去掉一层文件夹
-                FMPFile.initDir(path)
-            }
-        }
-    }
-    /**
-     * 新建文件  
-     * 如果当前目录已有同名文件，则不执行任何操作
-     * @param path 要新建的文件夹的路径，如果要在程序当前工作目录下新建，直接传入文件夹名即可
-     */
-    static initFile(path:string){
-        try{
-            fs.readFileSync(path)
-        }
-        catch(e){
-            fs.openSync(path,"a"/*(e: NodeJS.ErrnoException | null, fd: number):void=>{
-                FMPLogger.info(fd)
-                fs.close(fd,()=>{})
-                if(e)FMPLogger.info("新建文件的过程中，无法关闭文件，错误消息为：\n"+e)
-            }*/)
-        }
-    }
-    /**
-     * 同步读取并返回文件的全部内容  
-     * 请勿使用此方法读取大文件，否则会导致读取过程中服务器卡顿甚至无响应（假死）
-     * @param path 文件路径
-     * @returns 文件内容
-     */
-    static read(path:string):string{
-        try{
-            return fs.readFileSync(path).toString();
-        }
-        catch(e){
-            throw new Error("读取文件时发生错误！错误消息为：\n"+e);
-        }
-    }
-    /**
-     * 复制一个文件和文件夹
-     * @param source 要被复制的文件名文件夹
-     * @param destination 要复制到的目标
-     */
-    static copy(source:string,destination:string){
-        try{
-            fs.cpSync(source,destination,{recursive:true});
-        }
-        catch(e){
-            FMPLogger.error(e)
-        }
-    }
-    /**
-     * 强制向文件内写入文本内容，无视其中是否有内容、格式是否为文本文件  
-     * 请不要依赖此API对所有文件执行写入操作，由于写入时没有判断，操作不当可能会造成数据丢失或程序运行出现错误
-     * @param path 要写入的文件的路径
-     * @param content 要写入的内容
-     */
-    static forceWrite(path:string,content:string){
-        const target=fs.openSync(path,"w+");
-        fs.writeFileSync(path,content);
-        fs.close(target);
-    }
-    /**
-     * 重命名或移动一个文件  
-     * 要移动文件，修改其路径即可
-     * @param path 文件路径
-     * @param target 重命名后的文件名（路径）
-     */
-    static rename(path:string,target:string){
-        try{
-            fs.renameSync(path,target);
-        }
-        catch(e){
-            //FMPLogger.error(e);
-            throw new Error("移动文件时出现异常！\nnodejs报错：\n"+e)
-        }
-    }
-    /**
-     * 永久删除一个文件或文件夹，不放入系统回收站  
-     * 尽量不使用此方法，文件删除后无法恢复，有数据安全隐患
-     * @param path 文件或文件夹路径
-     */
-    static permanently_delete(path:string){
-        const file_stat=fs.statSync(path)
-        try{
-            if(file_stat.isFile()){
-                fs.unlinkSync(path);
-            }
-            else if(file_stat.isDirectory()){
-                //清空文件夹
-                for(let filename of this.ls(path)){
-                    this.permanently_delete(path+"/"+filename);
-                }
-                //删除文件夹
-                fs.rmdirSync(path);
-            }
-        }
-        catch(e){
-            FMPLogger.error(e)
-        }
-    }
+import {FMPFile} from "../File.js"
+import { FMPLogger } from "../Logger.js";
+import * as YML from "yaml"
+
+export class XMLFile{
+
 }
-export class FMPDirectory{
-    folders:string[];
-    constructor(dir:string){
-        this.folders=dir.split(/[/|\\]/);
-    }
-    toString(backslash=true):string{
-        let target:string="";
-        for(let i in this.folders){
-            target=target+this.folders[i];
-            if(Number(i)!=this.folders.length-1){
-                target=target+(backslash?"\\":"/");
-            }
-        }
-        return target;
-    }
-}
-export class JsonFile{
+
+export class YMLFile{
     fileContent:string;
     path:string;
     objpath:string[];
@@ -153,7 +14,7 @@ export class JsonFile{
     /**
      * 
      * @param {string} path 文件路径
-     * @param {Array<string>} objpath 在JSON文件内部的路径
+     * @param {Array<string>} objpath 在YML文件内部的路径
      */
     constructor(path:string,objpath:string[]=[]){
         //先把文件建出来
@@ -162,7 +23,7 @@ export class JsonFile{
         if(FMPFile.read(path).length==0)FMPFile.forceWrite(path,"{}");
         this.path=path;
         this.objpath=objpath
-        this.rootobj=JSON.parse(FMPFile.read(path));
+        this.rootobj=YML.parse(FMPFile.read(path));
         if(objpath.length!=0){
             const checkObjAvailable=(checkPath:any,index:number)=>{
                 if(index>objpath.length-1){return;}
@@ -209,7 +70,6 @@ export class JsonFile{
     get(key:string){
         let objpath=this.objpath;
         if(this.objpath.length==0){
-            //log("从根目录直接获取值")
             return this.rootobj[key];
         }
         else{
@@ -222,11 +82,7 @@ export class JsonFile{
          * @returns ？？这里好像写的有问题，但是竟然能运行  草，果然有问题，刚才就发现了
          */
         function getValue(obj:Object,index:number){
-            //log(objpath[index])
-            //log("JsonFile "+index)
             if(index>=objpath.length-1){//length-1是最后一个元素的索引，如果到达这个索引，就证明应该读取这一级目录中的值了
-                //log("JsonFile "+JSON.stringify(obj[objpath[index]]))
-                //log("JsonFile "+JSON.stringify(obj[objpath[index]][key]))
                 return obj[objpath[index]][key]
             }else{
                 return getValue(obj[objpath[index]],index+1)
@@ -244,16 +100,16 @@ export class JsonFile{
         let objpath=this.objpath
         let rootobj=this.rootobj
         let path=this.path;
+        //在根目录的情况下直接设置
         if(this.objpath.length==0)setRoot(key,value)
+        //否则通过嵌套的方式设置
         else{
-            //log("输入set的："+JSON.stringify(setValue(rootobj,0,value)))
-            //log(JSON.stringify(setValue(rootobj[objpath[0]],0,value)))
             result=setRoot(this.objpath[0],setValue(this.rootobj[this.objpath[0]],0,value));                
         }
         function setRoot(key:string,value:any):boolean{
             //注意，这个函数里面没有this，所有的this的属性都要传进来才能用
             rootobj[key]=value
-            FMPFile.forceWrite(path,JSON.stringify(rootobj,undefined,4));
+            FMPFile.forceWrite(path,YML.stringify(rootobj));
             return true;
         }
         function setValue(obj:any,index:number,value:any){
@@ -269,7 +125,6 @@ export class JsonFile{
             else{//obj[objpath[index]]是传进去的，要被修改的部分
                 let write=obj;
                 write[objpath[index+1]]=setValue(obj[objpath[index+1]],index+1,value)
-                //log(JSON.stringify(write,0,4))
                 return write
             }
         } 
@@ -277,7 +132,7 @@ export class JsonFile{
         return result;
     }
     /**
-     * 删除当前json对象的一个键
+     * 删除当前YML对象的一个键
      * @param key 要被删除的键
      * @returns 是否成功删除
      */
@@ -288,18 +143,16 @@ export class JsonFile{
         let path=this.path;
         if(this.objpath.length==0){
             delete rootobj[key]
-            FMPFile.forceWrite(path,JSON.stringify(rootobj,undefined,4));
+            FMPFile.forceWrite(path,YML.stringify(rootobj));
             return true;
         }
         else{
-            //log("输入set的："+JSON.stringify(setValue(rootobj,0,value)))
-            //log(JSON.stringify(setValue(rootobj[objpath[0]],0,value)))
             result=setRoot(this.objpath[0],deleteValue(this.rootobj[this.objpath[0]],0));                
         }
         function setRoot(key:string,value:any):boolean{
             //注意，这个函数里面没有this，所有的this的属性都要传进来才能用
             rootobj[key]=value
-            FMPFile.forceWrite(path,JSON.stringify(rootobj,undefined,4));
+            FMPFile.forceWrite(path,YML.stringify(rootobj));
             return true;
         }
         function deleteValue(obj:any,index:number){
@@ -315,7 +168,6 @@ export class JsonFile{
             else{//obj[objpath[index]]是传进去的，要被修改的部分
                 let write=obj;
                 write[objpath[index+1]]=deleteValue(obj[objpath[index+1]],index+1)
-                //log(JSON.stringify(write,0,4))
                 return write
             }
         } 
@@ -324,13 +176,13 @@ export class JsonFile{
     }
     reloadroot():boolean{
         this.fileContent=FMPFile.read(this.path)
-        this.rootobj=JSON.parse(this.fileContent);
+        this.rootobj=YML.parse(this.fileContent);
         return true;
         //this.keys=this.getAllKeys(this.rootobj);
     }
     /**
      * 重载当前配置文件  
-     * JsonFile不会锁定文件或跟踪文件修改，因此如果用户或其他软件修改了文件，需要通过某种方式使当前插件调用这个reload刷新文件内容
+     * YMLFile不会锁定文件或跟踪文件修改，因此如果用户或其他软件修改了文件，需要通过某种方式使当前插件调用这个reload刷新文件内容
      * @returns 是否重载成功
      */
     reload():boolean{
@@ -340,7 +192,6 @@ export class JsonFile{
         if(this.objpath.length==0){
             return Object.keys(this.rootobj)
         }
-        //log(JSON.stringify(obj[objpath[index]]))
         if(index>=this.objpath.length-1){//length-1是最后一个元素的索引，如果到达这个索引，就证明应该读取这一级目录中的值了
             
             return Object.keys(obj[this.objpath[index]])
@@ -361,5 +212,5 @@ export class JsonFile{
     static get version(){
         return "0.0.1";
     }
+    
 }
-
