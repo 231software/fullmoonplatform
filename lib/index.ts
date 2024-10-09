@@ -58,7 +58,8 @@ export {
     FMPSQLDataTypeEnum as SQLDataTypeEnum,
     FMPSQLDataType as SQLDataType,
     FMPSQLDBDataType as SQLDBDataType,
-    FMPSQLComparisonOperators as SQLComparisonOperators
+    FMPSQLComparisonOperators as SQLComparisonOperators,
+    FMPSQLSingleArrayTable as SQLSingleArrayTable
 } from "./Features/SQLite3.js"
 export {
     YMLFile
