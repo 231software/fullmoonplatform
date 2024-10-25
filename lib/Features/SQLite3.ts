@@ -45,6 +45,7 @@ export class FMPSQLDataType{
             case FMPSQLDataTypeEnum.VARBINARY:return `VARBINARY(${this.params[0]})`
 
             case FMPSQLDataTypeEnum.INTEGER:return `INTEGER`
+            case FMPSQLDataTypeEnum.BIGINT:return `BIGINT`
 
             case FMPSQLDataTypeEnum.REAL:return `REAL`
             
@@ -235,6 +236,7 @@ export class FMPSQLite3{
                 case "INTEGER":return FMPSQLDataTypeEnum.INTEGER
                 case "REAL":return FMPSQLDataTypeEnum.REAL
                 case "TEXT":return FMPSQLDataTypeEnum.TEXT
+                case "BIGINT":return FMPSQLDataTypeEnum.BIGINT
                 default:throw new SyntaxError("请为getColumns方法的toFMPSQlite3Type函数完善"+type+"映射")
             }
         }
@@ -368,28 +370,14 @@ export class FMPSQLSingleArrayTable{
 
     }
     get(bindedColumnValue:any){
-        const result=this.session.queryAllSync(`SELECT * FROM ${this.table} WHERE FMPSQLite3SingleArrayTableForignKeyColumn=?`,bindedColumnValue)
         //对原始返回的数据进行排序
-        let low=0
-        let high=result.length-1
-        while(low<high){
-            for(let i=low;i<high;i++){
-                if(result[i].FMPSQLite3SingleArrayTableArrayIndexColumn>result[i+1].FMPSQLite3SingleArrayTableArrayIndexColumn){
-                    let tmp=result[i]
-                    result[i]=result[i+1]
-                    result[i+1]=tmp
-                }
-            }
-            high--
-            for(let i=high-1;i>=low;i--){
-                if(result[i].FMPSQLite3SingleArrayTableArrayIndexColumn<result[i+1].FMPSQLite3SingleArrayTableArrayIndexColumn){
-                    let tmp=result[i]
-                    result[i]=result[i+1]
-                    result[i+1]=tmp
-                }
-            }
-        }
-        return result
+        return this.session
+            .queryAllSync(`SELECT * FROM ${this.table} WHERE FMPSQLite3SingleArrayTableForignKeyColumn=?`,bindedColumnValue)
+            .sort(
+                (a,b)=>
+                    a.FMPSQLite3SingleArrayTableArrayIndexColumn-
+                    b.FMPSQLite3SingleArrayTableArrayIndexColumn
+            )
     }
     push(bindedColumnValue:any,...values:{columnName:string,value:any}[][]){
         const currentValue=this.get(bindedColumnValue)
