@@ -53,6 +53,8 @@ export {
     FMPDisableEvent as DisableEvent
 } from "./Events/Process.js"
 export {FMPPlayerToggleSneakEvent as PlayerToggleSneakEvent,FMPPlayerJoinEvent as PlayerJoinEvent} from "./Events/Player.js"
+
+//features
 export {
     FMPSQLite3 as SQLite3,
     FMPSQLDataTypeEnum as SQLDataTypeEnum,
@@ -64,6 +66,11 @@ export {
 export {
     YMLFile
 } from "./Features/YMLFile.js"
+export {
+    FMPWS as WebSocket,
+    OneBot
+} from "./Features/WebSocket.js"
+
 export {
     FMPCurrency as Currency
 } from "./Game/Economy.js"
