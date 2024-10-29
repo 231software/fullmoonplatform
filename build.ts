@@ -53,12 +53,12 @@ const platforms_featuers=new Map([
             isNodeJS:true,
             unsupported_packages:[
                 "sqlite3",
-                "better-sqlite3"
+                "yaml"
             ],
             lib:"nolib",
             tstarget:undefined,
             features:{
-                yml:["yaml","^2.5.1"],
+                yml:["js-yaml","^4.1.0"],
                 xml:["xml","^1.0.1"],
                 ws:["ws","8.18.0"],
                 sqlite3:["internal",""]
@@ -190,6 +190,9 @@ function compile_specified_platform(platform:string){
     //写入plugin_info.ts
     write_plugin_info(platform)
 
+    //编写FeaturesIndex.ts
+    writeFeaturesIndex()
+
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
     run_lib_scripts(platform,"before_compile.js")
 
@@ -319,4 +322,38 @@ function run_lib_scripts(platform:string,file:string){
             Logger.info(AfterCompileScriptTask.stderr.toString())
         }
     }
+}
+
+function writeFeaturesIndex(){
+    let FeaturesIndex=File.read("./lib/FeaturesIndex.ts")
+    //第一步：匹配每段feature代码
+    const FeaturesCodesRegExpArray=FeaturesIndex.match(/\/\/(\w+)>>(.*?)\/\/\1<</gs)
+    let FeaturesCodes:string[]=[]
+    if(FeaturesCodesRegExpArray!=null)for(let featureCodesRegExpArrayElement of FeaturesCodesRegExpArray){
+        FeaturesCodes.push(featureCodesRegExpArrayElement)
+    }
+    //第二步：针对每段feature代码修改导出
+    for(let featureCode of FeaturesCodes){
+        //(?<=\/\/\w+>>)(.*?)(?=\/\/\w+<<)
+        const featureNameMatchResult=featureCode.match(/\/\/(\w+)>>/s)
+        if(featureNameMatchResult==null)throw new Error("FeaturesIndex中，对于"+featureCode+"部分定义feature名的语法不正确")
+        const featureName=featureNameMatchResult[1]
+        //如果plugin.json中的feature写了这个featureName，则证明后面的代码有需要该feature，不需要替换成undefined，直接路过
+        //features可能未填写，如果未填写（undefined）就直接执行替换导出为undefined
+        if(plugin_conf.features?.includes(featureName))continue;
+        const featureExportCodeMatchResult=featureCode.match(/(?<=\/\/\w+>>)(.*?)(?=\/\/\w+<<)/s)
+        if(featureExportCodeMatchResult==null)throw new Error("FeaturesIndex中，对于"+featureCode+"部分定义feature模块导出代码部分的语法不正确")
+        const featureExportCode=featureExportCodeMatchResult[1]
+        const exportedModulesMatchResults=featureExportCode.match(/[,{](.+?)(?=[,}])/sg)
+        if(exportedModulesMatchResults==null)throw new Error("无法从FeaturesIndex中解析"+featureCode+"导出的模块");
+        const featureExport:string[]=[]
+        let undefinedExportStatement=""
+        for(let featureExportCodeMatchResult of exportedModulesMatchResults){
+            featureExportCodeMatchResult=featureExportCodeMatchResult.replace(/(.*as)|[\n{}, ]/sg,"")
+            featureExport.push(featureExportCodeMatchResult)
+            undefinedExportStatement=undefinedExportStatement+"export const "+featureExportCodeMatchResult+"=undefined\n"
+        }
+        FeaturesIndex=FeaturesIndex.replace(featureExportCode,"\n"+undefinedExportStatement+"\n")
+    }
+    File.forceWrite("./lib/FeaturesIndex.ts",FeaturesIndex)
 }
