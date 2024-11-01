@@ -300,6 +300,30 @@ export class FMPSQLite3{
         //执行语句
         this.runSync(statement,...all_parameters)
     }
+    setRowFromPrimaryKey(tableName:string,primaryKeyValue:any,...values:{
+        columnName:string,
+        value:any
+    }[]){
+        const columns=this.getColumns(tableName)
+        let primaryKeyColumnName=""
+        let valuesOrder:any[]=[]
+        for(let value of values){
+            let columnIndex=0
+            //找到当前值对应的列
+            for(let i in columns){
+                if(columns[i].primary_key)primaryKeyColumnName=columns[i].name
+                if(columns[i].name==value.columnName){
+                    columnIndex=Number(i)
+                    break;
+                }
+            }
+            valuesOrder[columnIndex]=value.value
+        }
+        this.setRow(tableName,{
+            columnName:primaryKeyColumnName,
+            value:primaryKeyValue
+        },...values)
+    }
     /**
      * 在指定的表中根据值在主键中查找对应的数据
      * @param tableName 要查询的数据所在的表名

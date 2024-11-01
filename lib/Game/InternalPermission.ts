@@ -2,6 +2,7 @@
 export enum FMPInternalPermission{
     Any=0,
     Admin,
+    /**一般情况下服务器的OP是这个等级 */
     GameMasters,
     HostPlayer,
     Console,

@@ -65,4 +65,46 @@ export class FMPPlayer{
     setGameMode(gameMode:FMPGameMode):boolean{
         return false;
     }
+    /**
+     * 调用加载器或插件内数据库通过玩家名查询其UUID
+     * @param name 玩家游戏名
+     * @returns 玩家UUID
+     */
+    static name2uuid(name:string):string|undefined{
+        return undefined
+    }
+    /**
+     * 调用加载器或插件内数据库通过玩家XUID查询其UUID  
+     * 玩家不一定通过xbox登录服务器，所以该函数可能总是返回undefined
+     * @param xuid 玩家XUID
+     * @returns 玩家UUID
+     */
+    static xuid2uuid(xuid:string):string|undefined{
+        return undefined
+    }
+    /**
+     * 调用加载器或插件内数据库通过玩家UUID查询玩家名
+     * @param uuid 玩家UUID
+     * @returns 玩家名
+     */
+    static uuid2name(uuid:string):string|undefined{
+        return undefined
+    }
+    /**
+     * 调用加载器或插件内数据库通过玩家UUID查询玩家XUID  
+     * 玩家不一定通过xbox登录服务器，所以该函数可能总是返回undefined
+     * @param uuid 玩家UUID
+     * @returns 玩家XUID
+     */
+    static uuid2xuid(uuid:string):string|undefined{
+        return undefined
+    }
+    /**
+     * 通过玩家对应的字段获取玩家
+     * @param prividedID 玩家的游戏名/UUID/XUID
+     * @returns 玩家在线时返回该玩家对象，不在线的返回undefined
+     */
+    static getOnlinePlayer(providedID:string):FMPPlayer|undefined{
+        return undefined
+    }
 }
