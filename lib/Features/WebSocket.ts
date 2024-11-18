@@ -1,7 +1,6 @@
 //import WebSocket, { WebSocketServer } from 'ws';
 const WebSocket=require("ws")
 const WebSocketServer=WebSocket.Server
-import { string } from "yaml/dist/schema/common/string"
 import {FMPLogger} from "../Logger"
 import * as net from "net"
 
@@ -353,6 +352,9 @@ export class OneBot{
         
         return true;
     }
+    onRawMessageCallback=(data:any)=>{
+        this.check_access_token(JSON.parse(data.toString()))
+    }
     onNotifyCallback=(target_id:number,user_id:number,group_id?:number)=>{
 
     }
@@ -369,6 +371,10 @@ export class OneBot{
                 ["access_token",access_token]
             ])
         })
+        //接受消息部分对接ws的基础回调
+        this.connection.onMessage=(data)=>{
+            this.onRawMessageCallback(data)
+        }
         //在还没有设置消息监听的时候，先设置那些最基础的监听
         this.connection.onMessage=(data)=>{
             this.check_access_token(JSON.parse(data.toString()))
@@ -389,74 +395,12 @@ export class OneBot{
     set onNotified(callback:(user_id:number,group_id?:number)=>boolean){
         this.onNotifiedCallback=callback
     }
-    set onRawMessage(callback:(data:Buffer)=>void){
-        this.connection.onMessage=(data)=>{
-            const dataObj=JSON.parse(data.toString())
-            callback(data)
-            this.check_access_token(JSON.parse(data.toString()))
-            switch(dataObj.post_type){
-                case "meta_event":{
-                    switch(dataObj.meta_event_type){
-                        case "heartbeat":{
-                            this.onHeartbeatCallback({
-                                time:new Date(dataObj.time),
-                                self_id:dataObj.self_id,
-                                status:dataObj.status
-                            })}
-                            break;
-                        case "lifecycle":{
-                            this.onOpenCallback({
-                                time:new Date(dataObj.time),
-                                self_id:dataObj.self_id
-                            })
-                            break;
-                        }
-                    }
-                    break;
-                }
-                case "message":{
-                    this.onMessageCallback({
-                        self_id: dataObj.self_id,
-                        time: new Date(dataObj.time),
-                        messagse_id: dataObj.message_id,
-                        real_id: dataObj.real_id,
-                        message_seq: dataObj.message_seq,
-                        message_type: toOneBotMessageOriginType(dataObj.message_type),
-                        sender: dataObj.sender,
-                        message: (()=>{
-                            //消息可能不是数组类型
-                            const messageList:OneBotMessage[]=[]
-                            for(let message of dataObj.message){
-                                messageList.push({
-                                    data: message.data,
-                                    type: toOneBotMessageType(message.type)
-                                })
-                            }
-                            
-                            return messageList;
-                        })(),
-                        raw_message: dataObj.raw_message,
-                        font: dataObj.font,
-                        sub_type: dataObj.sub_type
-                    })
-                    break;
-                }
-                //戳一戳等
-                case "notice":{
-                    switch(dataObj.notice_type){
-                        //戳一戳
-                        case "notify":{
-                            //target_id,user_id,group_id
-                            this.onNotifyCallback(dataObj.target_id,dataObj.user_id,dataObj.group_id)
-                            //自己被戳
-                            if(dataObj.target_id==dataObj.self_id)this.onNotifiedCallback(dataObj.user_id,dataObj.group_id)
-                        }
-                    }
-                    break;
-                }
-            }
-
+    set onRawMessage(callback:(data:Buffer)=>boolean){
+        this.onRawMessageCallback=(data)=>{
+            if(!callback(data))return
+            this.trigger_message_callback(JSON.parse(data.toString()))
         }
+        
     }
     set onRawOpen(callback:()=>void){
         this.connection.onOpen=()=>{
@@ -491,6 +435,71 @@ export class OneBot{
             FMPLogger.error("access token错误")
             //如果access token错误，需要直接抛出错误让fmp项目自行捕获，否则会反复重连
             //这部分可能在异步里面，所以报错需要合到后面的onError监听里
+        }
+    }
+    trigger_message_callback(dataObj:any){
+        this.check_access_token(dataObj)
+        switch(dataObj.post_type){
+            case "meta_event":{
+                switch(dataObj.meta_event_type){
+                    case "heartbeat":{
+                        this.onHeartbeatCallback({
+                            time:new Date(dataObj.time),
+                            self_id:dataObj.self_id,
+                            status:dataObj.status
+                        })}
+                        break;
+                    case "lifecycle":{
+                        this.onOpenCallback({
+                            time:new Date(dataObj.time),
+                            self_id:dataObj.self_id
+                        })
+                        break;
+                    }
+                }
+                break;
+            }
+            case "message":{
+                this.onMessageCallback({
+                    self_id: dataObj.self_id,
+                    time: new Date(dataObj.time),
+                    messagse_id: dataObj.message_id,
+                    real_id: dataObj.real_id,
+                    message_seq: dataObj.message_seq,
+                    message_type: toOneBotMessageOriginType(dataObj.message_type),
+                    sender: dataObj.sender,
+                    message: (()=>{
+                        //消息可能不是数组类型
+                        const messageList:OneBotMessage[]=[]
+                        for(let message of dataObj.message){
+                            messageList.push({
+                                data: message.data,
+                                type: toOneBotMessageType(message.type)
+                            })
+                        }
+                        
+                        return messageList;
+                    })(),
+                    raw_message: dataObj.raw_message,
+                    font: dataObj.font,
+                    sub_type: dataObj.sub_type
+                })
+                break;
+            }
+            //戳一戳等
+            case "notice":{
+                switch(dataObj.notice_type){
+                    //戳一戳
+                    case "notify":{
+                        //target_id,user_id,group_id
+                        this.onNotifyCallback(dataObj.target_id,dataObj.user_id,dataObj.group_id)
+                        //自己被戳
+                        if(dataObj.target_id==dataObj.self_id)this.onNotifiedCallback(dataObj.user_id,dataObj.group_id)
+                    }
+                }
+                break;
+            }
+
         }
     }
     act(action:string,params:any,echo=""){
