@@ -258,7 +258,7 @@ interface OneBotLifecycleData{
     self_id:number
 }
 
-interface OneBotMessageData{
+export interface OneBotMessageData{
     self_id:number,
     time:Date,
     messagse_id:number,
@@ -273,12 +273,12 @@ interface OneBotMessageData{
     group_id?:number
 }
 
-interface OneBotMessageTextContent{
+export interface OneBotMessageTextContent{
     text:string
 }
-interface OneBotMessageReplyContent{
+export interface OneBotMessageReplyContent{
 }
-interface OneBotMessageImageContent{
+export interface OneBotMessageImageContent{
     /**图片的文件名 */
     file:string,
     subType:number,
@@ -286,30 +286,30 @@ interface OneBotMessageImageContent{
     url:string,
     file_size:string
 }
-interface OneBotMessageRecordContent{
+export interface OneBotMessageRecordContent{
 }
-interface OneBotMessageAtContent{
+export interface OneBotMessageAtContent{
 }
-interface OneBotMessageMarkdownContent{
+export interface OneBotMessageMarkdownContent{
     /**该消息的markdown代码 */
     data:string
 }
-interface OneBotMessageJSONContent{
+export interface OneBotMessageJSONContent{
     /**该消息的json代码**解析好的**对象 */
     data:any
 }
-interface OneBotMessageFaceContent{
+export interface OneBotMessageFaceContent{
     /**大表情消息的表情id */
     id:string
 }
-interface OneBotMessageFileContent{
+export interface OneBotMessageFileContent{
     file:string,
     path:string,
     file_id:string
     file_size:string
 }
 /**平台提供的表情包 */
-interface OneBotMessageMFaceContent{
+export interface OneBotMessageMFaceContent{
     /**表情的标题 */
     summary:string,
     /**表情的下载链接 */
@@ -320,7 +320,7 @@ interface OneBotMessageMFaceContent{
     emoji_packageid:string,
     key:string
 }
-interface OneBotMessageVideoContent{
+export interface OneBotMessageVideoContent{
     file:string,
     /**文件在**OneBot所在服务器中**的文件目录 */
     path:string,
