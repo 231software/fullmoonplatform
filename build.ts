@@ -197,7 +197,7 @@ function compile_specified_platform(platform:string){
     run_lib_scripts(platform,"before_compile.js")
 
     //执行编译命令
-    const task=child_process.spawnSync("tsc")
+    const task=child_process.spawnSync("tsc",[],{shell:true})
     Logger.info(task.stdout.toString())
     if(task.stderr){
         Logger.info(task.stderr.toString())
