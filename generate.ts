@@ -27,16 +27,6 @@ File.forceWrite("out/tsconfig.json",JSON.stringify({
 let current_directory=new Directory(process.cwd())
 current_directory.folders.push("out");
 process.chdir(current_directory.toString(false))
-//?
-const test=child_process.spawnSync("echo \"%cd%\"",[],{shell: true})
-if(test.stdout)Logger.info(test.stdout.toString());
-else {
-    if(test.stderr)Logger.info(test.stderr.toString());
-    else{
-        Logger.error("test~命令执行失败，无法捕获任何编译输出。")
-        Logger.error("退出代码：",test.status)
-    }
-}
 //开始编译
 const tsc_result=child_process.spawnSync("tsc",[],{shell: true})
 if(tsc_result.stdout)Logger.info(tsc_result.stdout.toString());
