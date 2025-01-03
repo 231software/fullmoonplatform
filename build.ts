@@ -232,6 +232,7 @@ function write_plugin_info(platform:string){
     switch(platform){
         case "llse":
         case "lse":
+        case "esjse":
         case "ls":data_path="plugins/"+data_path;break;
     }
     File.forceWrite("lib/plugin_info.ts",`
