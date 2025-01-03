@@ -82,6 +82,13 @@ const platforms_featuers=new Map([
         }        
     ],
     [
+        "esjse",{
+            isNodeJS:true,
+            unsupported_packages:[],
+            lib:"nolib"
+        }        
+    ],
+    [
         "bdsx",{
             isNodeJS:true,
             unsupported_packages:[
@@ -178,10 +185,11 @@ function compile_specified_platform(platform:string){
     write_tsconfig(platform,platform_features)
 
     //写入index.ts
+    //这些平台的开服事件并不位于事件系统，需要ScriptDone()触发：nodejs,endstone jsengine
     File.forceWrite("index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
     import {ScriptDone} from "./lib/index.js";
-    ${platform=="nodejs"?"ScriptDone();":""}
+    ${platform=="nodejs"||"esjse"?"ScriptDone();":""}
     export function main(){
         ScriptDone();
     }
