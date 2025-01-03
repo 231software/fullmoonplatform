@@ -1,0 +1,5 @@
+{
+    "scripts": {
+        "generate":"node gen_dist/generate.js"
+    }
+}
