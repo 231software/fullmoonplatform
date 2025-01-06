@@ -186,7 +186,7 @@ function compile_specified_platform(platform:string){
     writeFeaturesIndex()
 
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    run_lib_scripts(platform,"before_compile.js")
+    run_lib_scripts(platform,"before_compile.js",plugin_conf)
 
     //执行编译命令
     const task=child_process.spawnSync("tsc",[],{shell:true})
@@ -204,7 +204,7 @@ function compile_specified_platform(platform:string){
     write_package_json(platform,platform_features)
 
     //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    run_lib_scripts(platform,"after_compile.js")
+    run_lib_scripts(platform,"after_compile.js",plugin_conf)
     
     //删除index.ts
     File.permanently_delete("index.ts");
@@ -311,14 +311,22 @@ function write_package_json(platform:string,platform_features:any){
     File.forceWrite(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/package.json",JSON.stringify(npm_package,undefined,4))
 }
 
-function run_lib_scripts(platform:string,file:string){
-    //这个外层的if是用于判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
-    if(File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts").includes(file)){
-        const AfterCompileScriptTask=child_process.spawnSync("node",["libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts/"+file,"{}"])
-        Logger.info(AfterCompileScriptTask.stdout.toString())
-        if(AfterCompileScriptTask.stderr){
-            Logger.info(AfterCompileScriptTask.stderr.toString())
-        }
+function run_lib_scripts(platform:string,file:string,plugin_conf:any){
+    //判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
+    if(!File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts").includes(file))return
+    //用base64向构建脚本发送全部插件元数据
+    const AfterCompileScriptTask=child_process.spawnSync(
+        "node",
+        [
+            "libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts/"+file,
+            Buffer.from(JSON.stringify({
+                plugin_conf
+            })).toString("base64")
+        ]
+    )
+    Logger.info(AfterCompileScriptTask.stdout.toString())
+    if(AfterCompileScriptTask.stderr){
+        Logger.info(AfterCompileScriptTask.stderr.toString())
     }
 }
 
