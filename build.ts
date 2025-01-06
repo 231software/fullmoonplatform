@@ -31,40 +31,12 @@ lib就是这个模板库
  * 删除lib文件夹
  * 最后把temp中的lib文件夹放回原位
  */
-import {Directory, File, Logger} from "./lib/index.js"
+import {Directory, File, JsonFile, Logger} from "./lib/index.js"
 import * as child_process from "child_process";
 /** 各平台的**特性**配置文件，将来需要独立出去，因为需要供其他开发者修改 */
+
+/*
 const platforms_featuers=new Map([
-    [
-        "nodejs",{
-            isNodeJS:true,
-            lib:"nolib",
-            tstarget:undefined,
-            features:{
-                yml:["yaml","^2.5.1"],
-                xml:["xml","^1.0.1"],
-                ws:["ws","8.18.0"],
-                sqlite3:["better-sqlite3","^11.3.0"]
-            }
-        },
-    ],
-    [
-        "llse",{
-            isNodeJS:true,
-            unsupported_packages:[
-                "sqlite3",
-                "yaml"
-            ],
-            lib:"nolib",
-            tstarget:undefined,
-            features:{
-                yml:["js-yaml","^4.1.0"],
-                xml:["xml","^1.0.1"],
-                ws:["ws","8.18.0"],
-                sqlite3:["internal",""]
-            }
-        }        
-    ],
     [
         "llselib",{
             isNodeJS:false,
@@ -78,13 +50,6 @@ const platforms_featuers=new Map([
                 "sqlite3",
                 "better-sqlite3"
             ],
-            lib:"nolib"
-        }        
-    ],
-    [
-        "esjse",{
-            isNodeJS:true,
-            unsupported_packages:[],
             lib:"nolib"
         }        
     ],
@@ -104,6 +69,7 @@ const platforms_featuers=new Map([
         }        
     ]
 ])
+*/
 
 Logger.info("开始构建")
 //读取plugin.json
@@ -144,6 +110,7 @@ if(!plugin_conf.priorities.default){
 }
 else{
     //尝试读取库中所有的文件夹，每个文件夹是一个平台
+    //临时方案，只读取第一个
     /**将库中每个文件夹都当作一个平台来整理出的所有当前库支持的平台的列表 */
     const platforms=(()=>{
         try{
@@ -157,6 +124,8 @@ else{
     for(let platform of platforms){
         supported_platforms.push(platform);
         //（临时方案）按照支持平台整理库文件时，按plugin.json中priorities项default指定的库直接复制
+        //temp里面的libs是最终要用的libs文件夹，里面一个文件夹对应一个平台的库
+        //将用于编译的libs文件夹的库复制到temp里，组装成最终要用的libs文件夹
         File.copy("libs/"+plugin_conf.priorities.default[0]+"/libs","temp/libs");
     }
 }
@@ -173,30 +142,45 @@ File.rename("temp/lib","lib");
 File.permanently_delete("temp")
 Logger.info("构建完成")
 
+/**
+ * 为指定平台执行一次编译
+ * @param platform 当前平台的名字
+ * @returns 
+ */
 function compile_specified_platform(platform:string){
     //跳过各操作系统为目录生成的文件
     if([".DS_Store",".desktop.ini","Thumb.db"].includes(platform))return;
-    /**当前平台的特性配置文件 */
-    const platform_features=platforms_featuers.get(platform);
+
     Logger.info("正在为"+platform+"平台构建")
+
+    //读取当前平台的特性配置文件
+    if(!File.ls(`temp/libs/${platform}`).includes("platform.json")){
+        Logger.error(platform+"不包含platform.json，不会为此平台编译。")
+        return
+    }
+    /**当前平台的特性配置文件 */
+    const platform_features=new JsonFile(`temp/libs/${platform}/platform.json`).rootobj;
+
+    //将当前平台的lib文件夹复制到根目录用于编译
     File.copy("temp/libs/"+platform+"/lib","lib");
+    
 
     //写入tsconfig.json
     write_tsconfig(platform,platform_features)
 
     //写入index.ts
-    //这些平台的开服事件并不位于事件系统，需要ScriptDone()触发：nodejs,endstone jsengine
+    //这些平台的开服事件并不位于事件系统，需要ScriptDone()触发
     File.forceWrite("index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
     import {ScriptDone} from "./lib/index.js";
-    ${platform=="nodejs"||"esjse"?"ScriptDone();":""}
+    ${platform_features.require_ScriptDone===true?"ScriptDone();":""}
     export function main(){
         ScriptDone();
     }
     `)
 
     //写入plugin_info.ts
-    write_plugin_info(platform)
+    write_plugin_info(platform,platform_features.data_path)
 
     //编写FeaturesIndex.ts
     writeFeaturesIndex()
@@ -227,14 +211,14 @@ function compile_specified_platform(platform:string){
     File.permanently_delete("lib")
 }
 
-function write_plugin_info(platform:string){
-    let data_path=plugin_conf.data_path
-    switch(platform){
-        case "llse":
-        case "lse":
-        case "esjse":
-        case "ls":data_path="plugins/"+data_path;break;
-    }
+/**
+ * 为插件写入plugin_info常量供代码读取
+ * @param platform 平台名
+ */
+function write_plugin_info(platform:string,plugin_data_path:string){
+    //<data_path>是占位符，表示插件定义的data_path，必须位于末尾，未填则会导致插件执行时无视其配置的data_path而完全只采用库定义的路径
+    //<data_path>前必须带“/”，后面不能再出现任何字符
+    let data_path=plugin_data_path.replace("<data_path>",plugin_conf.data_path)
     File.forceWrite("lib/plugin_info.ts",`
 export const INFO=JSON.parse(\`${JSON.stringify(plugin_conf)}\`)
 export const data_path="${data_path}"
