@@ -192,7 +192,12 @@ function compile_specified_platform(platform:string){
     const task=child_process.spawnSync("tsc",[],{shell:true})
     Logger.info(task.stdout.toString())
     if(task.stderr){
-        Logger.info(task.stderr.toString())
+        const taskerr=task.stderr.toString()
+        //只有换行符和空格的错误输出就直接跳过了
+        if(taskerr.replace("\n","").replace(" ","").length!=0){
+            Logger.error("以下是错误信息")
+            for(let line of taskerr.split("\n"))Logger.error(line)
+        }
     }
 
     //写入package.json
@@ -309,7 +314,7 @@ function write_package_json(platform:string,platform_features:any){
 function run_lib_scripts(platform:string,file:string){
     //这个外层的if是用于判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
     if(File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts").includes(file)){
-        const AfterCompileScriptTask=child_process.spawnSync("node",["libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts/"+file])
+        const AfterCompileScriptTask=child_process.spawnSync("node",["libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts/"+file,"{}"])
         Logger.info(AfterCompileScriptTask.stdout.toString())
         if(AfterCompileScriptTask.stderr){
             Logger.info(AfterCompileScriptTask.stderr.toString())

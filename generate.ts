@@ -16,22 +16,32 @@ File.copy("build.ts","out/build.ts");
 File.forceWrite("out/tsconfig.json",JSON.stringify({
     files: ["build.ts"],
     exclude: ["./v0/**", "./build/**"],
-    lib: [ "dom", "es5", "es2015.promise" ,"es2015", "es2017"],
+    //es2018是为了正则表达式
+    lib: [ "dom", "es5", "es2015.promise" ,"es2015", "es2017","es2018"],
     compilerOptions: {
         outDir: "./build",
         downlevelIteration: true,
-        rootDir: "."
+        rootDir: ".",
+        target:"es2018",
+        moduleResolution:"nodenext",
+        module:"NodeNext"
     }   
 }))
 //切换工作目录到输出文件夹中
 let current_directory=new Directory(process.cwd())
 current_directory.folders.push("out");
 process.chdir(current_directory.toString(false))
-//开始编译
+//开始编译构建脚本
+Logger.info("开始编译构建脚本")
 const tsc_result=child_process.spawnSync("tsc",[],{shell: true})
-if(tsc_result.stdout)Logger.info(tsc_result.stdout.toString());
+if(tsc_result.stdout){
+    for(let line of tsc_result.stdout.toString().split("\n"))Logger.info(line);
+}
 else {
-    if(tsc_result.stderr)Logger.info(tsc_result.stderr.toString());
+    if(tsc_result.stderr){
+        Logger.error("编译构建脚本时有以下报错")
+        for(let line of tsc_result.stderr.toString().split("\n"))Logger.error(line)
+    }
     else{
         Logger.error("tsc命令执行失败，无法捕获任何编译输出。")
         Logger.error("退出代码：",tsc_result.status)
