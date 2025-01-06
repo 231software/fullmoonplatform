@@ -15,7 +15,7 @@ lib就是这个模板库
  *     name:库名
  *     author:作者
  *     repositoy:仓库地址
- *     maximum_version:各平台要求的引擎最低版本
+ *     minimum_version:各平台要求的引擎最低版本
  * }
  */
 /**
@@ -80,14 +80,16 @@ const plugin_conf=JSON.parse(File.read("plugin.json"));
 File.initDir(plugin_conf.build_dir);
 
 //为各平台整理库
-//创建temp文件夹并将原开发辅助lib放入temp
+//创建temp文件夹
 File.initDir("temp");
-try{
-    File.rename("lib","temp/lib");
-}
-catch(e){
-    Logger.warn("找不到原开发辅助文件夹lib！\n错误原因：\n"+e)
-}
+
+// 将原开发辅助lib放入temp
+// try{
+//     File.rename("lib","temp/lib");
+// }
+// catch(e){
+//     Logger.warn("找不到原开发辅助文件夹lib！\n错误原因：\n"+e)
+// }
 
 //在temp中创建libs文件夹，放置整理好用于编译的文件夹
 File.initDir("temp/libs")
@@ -130,24 +132,82 @@ else{
     }
 }
 
+
+//新建build文件夹
+File.initDir("temp/build")
+
+const compileTasks:Array<Promise<void>|undefined>=[]
+
 //整理完成，遍历所有平台开始编译
 for(let platform of supported_platforms){
-    compile_specified_platform(platform)
+    compileTasks.push(compile_specified_platform(platform))
 }
 
-//将lib放回原位
-File.rename("temp/lib","lib");
+//所有编译工作结束后的收尾工作
+(async ()=>{
+    Logger.info("开始执行编译后工作，正在等待所有编译任务完成")
+    //等待编译线程全部结束
+    //将lib放回原位
+    //File.rename("temp/lib","lib");
 
-//删除temp
-File.permanently_delete("temp")
+    await Promise.all(compileTasks)
+    Logger.info("所有编译完成")
+
+    //将所有插件编译结果放到根目录
+    File.initDir(plugin_conf.build_dir)
+    for(let platform of File.ls("temp/build")){
+        //为对应插件平台新建目录
+        File.initDir(plugin_conf.build_dir+"/"+platform)
+        try{
+            File.rename("temp/build/"+platform+"/js",plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name)
+        }
+        catch(e){
+            if(e.code==="EPERM"){
+                //文件夹已存在，用所有已构建出的文件替换掉原有文件
+                for(let builtFile of File.ls("temp/build/"+platform+"/js")){
+                    //删除原文件
+                    File.permanently_delete(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
+                    //放置新文件
+                    File.rename("temp/build/"+platform+"/js/"+builtFile,plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
+                }
+            }
+            else{
+                Logger.error("取出构建文件时出现错误！")
+                const errorText=e.toString()
+                for(let line of errorText.split("\n")){
+                    Logger.error(line)
+                }
+            }
+        }
+        
+    }
+    //删除temp
+    File.permanently_delete("temp")
+})().then(()=>{
+
+
+
+//所有的编译后要执行的代码都要在这里写！！！
 Logger.info("构建完成")
 
+
+
+
+})
+////////////////////////////////////////////////////////////////不要再在这里写任何代码了！！！
+////////////////////////////////////////////////////////////脚本末尾，以下为函数区
 /**
  * 为指定平台执行一次编译
  * @param platform 当前平台的名字
  * @returns 
  */
 function compile_specified_platform(platform:string){
+    
+    //以下是新的编译逻辑
+    //在temp文件夹
+    
+    //其他和正常步骤相同
+
     //跳过各操作系统为目录生成的文件
     if([".DS_Store",".desktop.ini","Thumb.db"].includes(platform))return;
 
@@ -158,11 +218,17 @@ function compile_specified_platform(platform:string){
         Logger.error(platform+"不包含platform.json，不会为此平台编译。")
         return
     }
-    /**当前平台的特性配置文件 */
+    //当前平台的特性配置文件
     const platform_features=new JsonFile(`temp/libs/${platform}/platform.json`).rootobj;
 
-    //将当前平台的lib文件夹复制到根目录用于编译
-    File.copy("temp/libs/"+platform+"/lib","lib");
+    //build中新建平台对应文件夹
+    File.initDir("temp/build/"+platform)
+    
+    //把插件源码src复制进去
+    File.copy("src","temp/build/"+platform+"/src")
+
+    //将当前平台的lib文件夹移动到temp/build于构建
+    File.copy("temp/libs/"+platform+"/lib","temp/build/"+platform+"/lib");
     
 
     //写入tsconfig.json
@@ -170,7 +236,7 @@ function compile_specified_platform(platform:string){
 
     //写入index.ts
     //这些平台的开服事件并不位于事件系统，需要ScriptDone()触发
-    File.forceWrite("index.ts",`
+    File.forceWrite("temp/build/"+platform+"/index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
     import {ScriptDone} from "./lib/index.js";
     ${platform_features.require_ScriptDone===true?"ScriptDone();":""}
@@ -183,37 +249,68 @@ function compile_specified_platform(platform:string){
     write_plugin_info(platform,platform_features.data_path)
 
     //编写FeaturesIndex.ts
-    writeFeaturesIndex()
+    writeFeaturesIndex(platform)
 
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
+    Logger.info("正在执行构建前脚本")
     run_lib_scripts(platform,"before_compile.js",plugin_conf)
 
     //执行编译命令
-    const task=child_process.spawnSync("tsc",[],{shell:true})
-    Logger.info(task.stdout.toString())
-    if(task.stderr){
-        const taskerr=task.stderr.toString()
-        //只有换行符和空格的错误输出就直接跳过了
-        if(taskerr.replace("\n","").replace(" ","").length!=0){
-            Logger.error("以下是错误信息")
-            for(let line of taskerr.split("\n"))Logger.error(line)
-        }
-    }
+    //进入编译目录执行命令
+    process.chdir("temp/build/"+platform)
 
-    //写入package.json
-    write_package_json(platform,platform_features)
+    //将tsc和后续任务包装进Promise
+    const compileTaskPromise=new Promise<void>((resolve,reject)=>{
+        const task=child_process.spawn("tsc",[],{shell:true,stdio:['pipe','pipe','pipe']})
+        const tscINFO:string[]=[]
+        const tscERROR:string[]=[]
+        task.stdout.on('data',chunk=>{
+            tscINFO.push(chunk.toString())
+        })
+        task.stderr.on('data',chunk=>{
+            tscERROR.push(chunk.toString())
+        })
+        task.on("close",code=>{
+            Logger.info(platform+"平台编译完成")
+            for(let line of tscINFO)Logger.info(line);
+            if((tscERROR.length==1&&tscERROR[0].length>0)||tscERROR.length>1){
+                Logger.error("以下是错误信息")
+                //只有换行符和空格的错误输出就直接跳过了
+                //if(taskerr.replace("\n","").replace(" ","").length!=0){
+                for(let line of tscERROR)Logger.error(line)
+                //}
+            }
+        
+            //写入package.json
+            write_package_json(platform,platform_features)
+        
+            //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
+            Logger.info("正在执行构建后脚本")
+            run_lib_scripts(platform,"after_compile.js",plugin_conf)
+            resolve()
+        })
+        return null
+    })
 
-    //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    run_lib_scripts(platform,"after_compile.js",plugin_conf)
-    
+    //启动上面编译的线程了就马上跳转回来，好执行下一个平台的编译
+    process.chdir("../../../")
+
+
+
+
+
+
+    //清理部分
     //删除index.ts
-    File.permanently_delete("index.ts");
+    //File.permanently_delete("index.ts");
     
     //删除tsconfig.json
-    File.permanently_delete("tsconfig.json");
+    //File.permanently_delete("tsconfig.json");
 
     //最后将这个复制过来的lib删除
-    File.permanently_delete("lib")
+    //File.permanently_delete("lib")
+
+    return compileTaskPromise
 }
 
 /**
@@ -224,7 +321,7 @@ function write_plugin_info(platform:string,plugin_data_path:string){
     //<data_path>是占位符，表示插件定义的data_path，必须位于末尾，未填则会导致插件执行时无视其配置的data_path而完全只采用库定义的路径
     //<data_path>前必须带“/”，后面不能再出现任何字符
     let data_path=plugin_data_path.replace("<data_path>",plugin_conf.data_path)
-    File.forceWrite("lib/plugin_info.ts",`
+    File.forceWrite("temp/build/"+platform+"/lib/plugin_info.ts",`
 export const INFO=JSON.parse(\`${JSON.stringify(plugin_conf)}\`)
 export const data_path="${data_path}"
 export const PLATFORM="${platform}"
@@ -237,7 +334,7 @@ function write_tsconfig(platform:string,platform_features:any){
         exclude: ["./v0/**", "./dist/**","libs","build","temp"],
         files:["index.ts"],
         compilerOptions: {
-            outDir: plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name,
+            outDir: "js",
             rootDir: ".",
             resolveJsonModule: true,
             downlevelIteration: true,
@@ -247,7 +344,7 @@ function write_tsconfig(platform:string,platform_features:any){
             forceConsistentCasingInFileNames:false
         }
     }
-    File.forceWrite("tsconfig.json",JSON.stringify(tsconfig));
+    File.forceWrite("temp/build/"+platform+"/tsconfig.json",JSON.stringify(tsconfig));
 }
 
 /**写入package.json */
@@ -308,7 +405,7 @@ function write_package_json(platform:string,platform_features:any){
     }
 
     //最后写入这个package.json
-    File.forceWrite(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/package.json",JSON.stringify(npm_package,undefined,4))
+    File.forceWrite("temp/build/"+platform+"/js/package.json",JSON.stringify(npm_package,undefined,4))
 }
 
 function run_lib_scripts(platform:string,file:string,plugin_conf:any){
@@ -330,8 +427,9 @@ function run_lib_scripts(platform:string,file:string,plugin_conf:any){
     }
 }
 
-function writeFeaturesIndex(){
-    let FeaturesIndex=File.read("./lib/FeaturesIndex.ts")
+function writeFeaturesIndex(platform:string){
+    //读取原文件内容
+    let FeaturesIndex=File.read("temp/build/"+platform+"/lib/FeaturesIndex.ts")
     //第一步：匹配每段feature代码
     const FeaturesCodesRegExpArray=FeaturesIndex.match(/\/\/(\w+)>>(.*?)\/\/\1<</gs)
     let FeaturesCodes:string[]=[]
@@ -361,5 +459,6 @@ function writeFeaturesIndex(){
         }
         FeaturesIndex=FeaturesIndex.replace(featureExportCode,"\n"+undefinedExportStatement+"\n")
     }
-    File.forceWrite("./lib/FeaturesIndex.ts",FeaturesIndex)
+    //将修改完的内容写进原文件
+    File.forceWrite("temp/build/"+platform+"/lib/FeaturesIndex.ts",FeaturesIndex)
 }
