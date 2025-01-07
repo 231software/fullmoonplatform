@@ -94,15 +94,6 @@ File.initDir("temp");
 //在temp中创建libs文件夹，放置整理好用于编译的文件夹
 File.initDir("temp/libs")
 
-//（临时方案）直接把plugin.json中priorities项default指定的库中的支持平台定为插件支持的平台
-//后面这里需要把所有库里的所有平台整理出来成为一个总的列表，还要用plugin.json里面提供的支持平台过滤，下面这个switch是实现
-switch(plugin_conf.supported_platforms.mode){
-    case "bl":
-        for(let platform of plugin_conf.supported_platforms.list){
-            //此处为黑名单模式下，遇到不支持平台时的处理方法的实现
-        }
-        break;
-}
 
 /**本地编译中所有将会得到支持的平台 */
 const supported_platforms:Set<string>=new Set();
@@ -139,6 +130,24 @@ else{
             //所有文件夹合并所有重名文件不替换
             File.copy("libs/"+lib+"/libs","temp/libs",{merge:true,skipSameNameFiles:true});
         }
+    }
+}
+
+//整理出插件不支持的平台
+switch(plugin_conf.supported_platforms.mode){
+    case "bl":{
+        for(let platform of plugin_conf.supported_platforms.list){
+            //从第三方库支持的平台列表中移除插件不支持的平台
+            supported_platforms.delete(platform)
+        }
+        break;
+    }
+    case "wl":{
+        for(let platform of supported_platforms){
+            //遍历中如果发现白名单中没有的平台就去掉
+            if(!plugin_conf.supported_platforms.list.includes(platform))supported_platforms.delete(platform)            
+        }
+        break;
     }
 }
 
@@ -225,6 +234,7 @@ function compile_specified_platform(platform:string){
     }
     //当前平台的特性配置文件
     const platform_features=new JsonFile(`temp/libs/${platform}/platform.json`).rootobj;
+    
 
     //build中新建平台对应文件夹
     File.initDir("temp/build/"+platform)
@@ -287,7 +297,6 @@ function compile_specified_platform(platform:string){
                 for(let line of tscERROR)Logger.error(line)
                 //}
             }
-        
             //写入package.json
             write_package_json(platform,platform_features)
         
@@ -386,6 +395,7 @@ function write_package_json(platform:string,platform_features:any){
 
         //根据feature的内容，在特性配置中找到对应的npm包并加入packages来进行整理
         for(let feature of features){
+            if(!platform_features.features)continue;
             if(platform_features.features[feature]){
                 packages.push(platform_features.features[feature])
             }
