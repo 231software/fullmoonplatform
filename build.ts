@@ -116,6 +116,11 @@ else{
     const defaultPriorities:string[]=plugin_conf.priorities.default
     //遍历默认顺序中的库，开始移动文件
     for(let lib of defaultPriorities){
+        //如果找不到与库名同名的文件夹，则直接跳过
+        if(!File.ls("libs").includes(lib)){
+            Logger.error("无法在libs中找到与",lib,"同名的文件夹！您是否忘记了将",lib,"的文件夹放置在libs中，或者是否将它重命名过，或是库名中存在拼写错误？第三方库的库名必须与其文件夹名相同。")
+            continue;
+        }
         /**将每个文件夹都当作一个平台来整理出的所有当前库支持的平台的列表 */
         const platforms=(()=>{
             try{
