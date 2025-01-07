@@ -70,8 +70,7 @@ export class FMPFile{
      * @param source 要被复制的文件名文件夹
      * @param destination 要复制到的目标
      */
-    static copy(source:string,destination:string,options:any={}){        
-        FMPLogger.info("copy")
+    static copy(source:string,destination:string,options:any={}){      
         let errorText="Error(s) occured while copying files!"
         try{
             //检查是否已存在同名文件
