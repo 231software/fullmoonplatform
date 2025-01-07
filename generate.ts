@@ -2,9 +2,9 @@ import { Directory, File,Logger } from "./lib/index.js";
 import * as child_process from "child_process";
 File.initDir("out")
 File.initDir("out/libs")
-File.copy("lib","out/lib");
-File.copy("src","out/src");
-File.copy("build.ts","out/build.ts");
+File.copy("lib","out/lib",{replaceFolder:true});
+File.copy("src","out/src",{replaceFolder:true});
+File.copy("build.ts","out/build.ts",{replaceFiles:true});
 //编译构建脚本
 /*
 结构：有一个build文件夹，是一个npm包，构建时通过node build来构建
@@ -57,7 +57,7 @@ File.forceWrite("out/build/package.json",JSON.stringify({
     main:"build.js"
 }))
 //复制示例plugin.json
-File.copy("plugin.json","out/plugin.json")
+File.copy("plugin.json","out/plugin.json",{replaceFiles:true})
 File.permanently_delete("out/build.ts");
 File.permanently_delete("out/tsconfig.json")
 

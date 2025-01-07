@@ -105,30 +105,35 @@ switch(plugin_conf.supported_platforms.mode){
 }
 
 /**本地编译中所有将会得到支持的平台 */
-const supported_platforms:string[]=[];
+const supported_platforms:Set<string>=new Set();
 if(!plugin_conf.priorities.default){
     Logger.info("插件没有配置默认库，所有未指定默认库的库文件都将不会用于编译。");
     Logger.info("如果这是您刚刚配置完成的满月平台项目，请在plugin.json的priorities中新建default项，并配置一些项目默认使用用来编译的库");
 }
 else{
     //尝试读取库中所有的文件夹，每个文件夹是一个平台
-    //临时方案，只读取第一个
-    /**将库中每个文件夹都当作一个平台来整理出的所有当前库支持的平台的列表 */
-    const platforms=(()=>{
-        try{
-            return File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs");
+    //临时方案，只读取插件的default项
+    const defaultPriorities:string[]=plugin_conf.priorities.default
+    //遍历默认顺序中的库，开始移动文件
+    for(let lib of defaultPriorities){
+        /**将每个文件夹都当作一个平台来整理出的所有当前库支持的平台的列表 */
+        const platforms=(()=>{
+            try{
+                return File.ls("libs/"+lib+"/libs");
+            }
+            catch(e){
+                Logger.error("无法获取库"+lib+"中支持平台列表\n错误原因：\n"+e)
+                return []
+            }
+        })()
+        for(let platform of platforms){
+            //向所有支持的平台中添加当前平台，由于supported_platforms为set类型，重复的平台将不会重复添加
+            supported_platforms.add(platform);
+            //temp里面的libs是最终要用的libs文件夹，里面一个文件夹对应一个平台的库
+            //将用于编译的libs文件夹的库复制到temp里，组装成最终要用的libs文件夹
+            //所有文件夹合并所有重名文件不替换
+            File.copy("libs/"+lib+"/libs","temp/libs",{merge:true,skipSameNameFiles:true});
         }
-        catch(e){
-            Logger.error("无法获取库"+plugin_conf.priorities.default[0]+"中支持平台列表\n错误原因：\n"+e)
-            return []
-        }
-    })()
-    for(let platform of platforms){
-        supported_platforms.push(platform);
-        //（临时方案）按照支持平台整理库文件时，按plugin.json中priorities项default指定的库直接复制
-        //temp里面的libs是最终要用的libs文件夹，里面一个文件夹对应一个平台的库
-        //将用于编译的libs文件夹的库复制到temp里，组装成最终要用的libs文件夹
-        File.copy("libs/"+plugin_conf.priorities.default[0]+"/libs","temp/libs");
     }
 }
 
@@ -146,9 +151,6 @@ for(let platform of supported_platforms){
 //所有编译工作结束后的收尾工作
 (async ()=>{
     //等待编译线程全部结束
-    //将lib放回原位
-    //File.rename("temp/lib","lib");
-
     await Promise.all(compileTasks)
 
     //将所有插件编译结果放到根目录
@@ -232,7 +234,11 @@ function compile_specified_platform(platform:string){
     //写入tsconfig.json
     write_tsconfig(platform,platform_features)
 
-    //写入index.ts
+    //写入lib中的index.ts
+    //临时方案，由于一些库的index.ts有依赖类型定义的情况，这部分后面再开发，至于这里则是直接采用LNSDK的index.ts，暂时性地所有第三方库的index.ts都必须是LNSDK的子集
+    File.copy("libs/LNSDK/libs/"+platform+"/lib/index.ts","temp/build/"+platform+"/lib/index.ts",{replaceFiles:true})
+
+    //写入最外层index.ts
     //这些平台的开服事件并不位于事件系统，需要ScriptDone()触发
     File.forceWrite("temp/build/"+platform+"/index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
@@ -405,12 +411,12 @@ function write_package_json(platform:string,platform_features:any){
 
 function run_lib_scripts(platform:string,file:string,plugin_conf:any){
     //判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
-    if(!File.ls("libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts").includes(file))return
+    if(!File.ls("temp/libs/"+platform+"/scripts").includes(file))return
     //用base64向构建脚本发送全部插件元数据
     const AfterCompileScriptTask=child_process.spawnSync(
         "node",
         [
-            "libs/"+plugin_conf.priorities.default[0]+"/libs/"+platform+"/scripts/"+file,
+            "temp/libs/"+platform+"/scripts/"+file,
             Buffer.from(JSON.stringify({
                 plugin_conf
             })).toString("base64")
