@@ -145,13 +145,11 @@ for(let platform of supported_platforms){
 
 //所有编译工作结束后的收尾工作
 (async ()=>{
-    Logger.info("开始执行编译后工作，正在等待所有编译任务完成")
     //等待编译线程全部结束
     //将lib放回原位
     //File.rename("temp/lib","lib");
 
     await Promise.all(compileTasks)
-    Logger.info("所有编译完成")
 
     //将所有插件编译结果放到根目录
     File.initDir(plugin_conf.build_dir)
@@ -252,7 +250,6 @@ function compile_specified_platform(platform:string){
     writeFeaturesIndex(platform)
 
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    Logger.info("正在执行构建前脚本")
     run_lib_scripts(platform,"before_compile.js",plugin_conf)
 
     //执行编译命令
@@ -271,10 +268,9 @@ function compile_specified_platform(platform:string){
             tscERROR.push(chunk.toString())
         })
         task.on("close",code=>{
-            Logger.info(platform+"平台编译完成")
             for(let line of tscINFO)Logger.info(line);
             if((tscERROR.length==1&&tscERROR[0].length>0)||tscERROR.length>1){
-                Logger.error("以下是错误信息")
+                Logger.error(platform+"平台编译完成，以下是错误信息")
                 //只有换行符和空格的错误输出就直接跳过了
                 //if(taskerr.replace("\n","").replace(" ","").length!=0){
                 for(let line of tscERROR)Logger.error(line)
@@ -285,7 +281,6 @@ function compile_specified_platform(platform:string){
             write_package_json(platform,platform_features)
         
             //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-            Logger.info("正在执行构建后脚本")
             run_lib_scripts(platform,"after_compile.js",plugin_conf)
             resolve()
         })
