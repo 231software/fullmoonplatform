@@ -31,7 +31,13 @@ lib就是这个模板库
  * 删除lib文件夹
  * 最后把temp中的lib文件夹放回原位
  */
-import {Directory, File, JsonFile, Logger} from "./lib/index.js"
+//import {Directory, File, JsonFile, Logger} from "./lib/index.js"
+import {
+    FMPDirectory as Directory,
+    FMPFile as File,
+    JsonFile
+} from "./lib/File.js"
+import {FMPLogger as Logger} from "./lib/Logger.js"
 import * as child_process from "child_process";
 /** 各平台的**特性**配置文件，将来需要独立出去，因为需要供其他开发者修改 */
 
