@@ -54,7 +54,13 @@ process.chdir(current_directory.toString(false))
 //为可执行npm包build文件夹创建package.json
 File.forceWrite("out/build/package.json",JSON.stringify({
     name:"Full Moon Platform builder",
-    main:"build.js"
+    main:"build.js",
+    dependencies: {
+        "js-yaml":"^4.1.0",
+        "yaml":"^2.7.0",
+        "ws":"^8.18.0",
+        "typescript":"^5.7.2"
+    }
 }))
 //复制示例plugin.json
 File.copy("plugin.json","out/plugin.json",{replaceFiles:true})
