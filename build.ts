@@ -295,7 +295,13 @@ function compile_specified_platform(platform:string){
             tscERROR.push(chunk.toString())
         })
         task.on("close",code=>{
-            for(let line of tscINFO)Logger.info(line);
+            if((tscINFO.length==1&&tscINFO[0].length>0)||tscINFO.length>1){
+                Logger.info(platform+"平台编译完成，以下是编译日志")
+                //只有换行符和空格的错误输出就直接跳过了
+                //if(taskerr.replace("\n","").replace(" ","").length!=0){
+                for(let line of tscINFO)Logger.info(line)
+                //}
+            }
             if((tscERROR.length==1&&tscERROR[0].length>0)||tscERROR.length>1){
                 Logger.error(platform+"平台编译完成，以下是错误信息")
                 //只有换行符和空格的错误输出就直接跳过了
