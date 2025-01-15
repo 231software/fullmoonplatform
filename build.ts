@@ -356,10 +356,13 @@ export const PLATFORM="${platform}"
 }
 
 function write_tsconfig(platform:string,platform_features:any){
+    let files:string[]=plugin_conf.files===undefined?[]:plugin_conf.files
+    files=files.map(file=>{return plugin_conf.src_dir+"/"+file})
+    files.push("index.ts")
     const tsconfig:any={
         //忽略libs
         exclude: ["./v0/**", "./dist/**","libs","build","temp"],
-        files:["index.ts"],
+        files,
         compilerOptions: {
             outDir: "js",
             rootDir: ".",
