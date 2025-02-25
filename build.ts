@@ -184,9 +184,12 @@ for(let platform of supported_platforms){
         catch(e){
             if(e.code==="EPERM"){
                 //文件夹已存在，用所有已构建出的文件替换掉原有文件
+                //所有被同名替换的文件都是根目录的文件，被替换的文件夹是整个替换
                 for(let builtFile of File.ls("temp/build/"+platform+"/js")){
                     //删除原文件
-                    File.permanently_delete(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
+                    //只有目标中有文件时才会删除
+                    if(File.ls(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name).includes(builtFile))File.permanently_delete(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
+                    
                     //放置新文件
                     File.rename("temp/build/"+platform+"/js/"+builtFile,plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
                 }
