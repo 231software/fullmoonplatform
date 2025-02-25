@@ -134,7 +134,12 @@ else{
             //temp里面的libs是最终要用的libs文件夹，里面一个文件夹对应一个平台的库
             //将用于编译的libs文件夹的库复制到temp里，组装成最终要用的libs文件夹
             //所有文件夹合并所有重名文件不替换
-            File.copy("libs/"+lib+"/libs","temp/libs",{merge:true,skipSameNameFiles:true});
+            try{
+                File.copy("libs/"+lib+"/libs","temp/libs",{merge:true,skipSameNameFiles:true});
+            }
+            catch(e){
+                throw new Error("使用"+lib+"为"+platform+"平台生成编译库时出现错误：\n"+e)
+            }
         }
     }
 }
@@ -182,7 +187,8 @@ for(let platform of supported_platforms){
             File.rename("temp/build/"+platform+"/js",plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name)
         }
         catch(e){
-            if(e.code==="EPERM"){
+            //Windows下为EPERM，类Unix下为ENOTEMPTY
+            if(["EPERM","ENOTEMPTY"].includes(e.code)){
                 //文件夹已存在，用所有已构建出的文件替换掉原有文件
                 //所有被同名替换的文件都是根目录的文件，被替换的文件夹是整个替换
                 for(let builtFile of File.ls("temp/build/"+platform+"/js")){
@@ -195,7 +201,7 @@ for(let platform of supported_platforms){
                 }
             }
             else{
-                Logger.error("取出构建文件时出现错误！")
+                Logger.error("取出构建文件时出现错误！错误码："+e.code)
                 const errorText=e.toString()
                 for(let line of errorText.split("\n")){
                     Logger.error(line)
