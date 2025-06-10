@@ -166,6 +166,7 @@ switch(plugin_conf.supported_platforms.mode){
 //新建build文件夹
 File.initDir("temp/build")
 
+/**编译任务集合，后续程序会等待集合中所有任务完成再继续 */
 const compileTasks:Array<Promise<void>|undefined>=[]
 
 //整理完成，遍历所有平台开始编译
@@ -223,8 +224,22 @@ Logger.info("构建完成")
 
 
 })
-////////////////////////////////////////////////////////////////不要再在这里写任何代码了！！！
-////////////////////////////////////////////////////////////脚本末尾，以下为函数区
+//#region 脚本末尾
+
+//#endregion
+
+
+//#region 不要再在下面
+
+//#endregion
+
+
+//#region 写任何代码了！！！
+
+
+//#endregion
+
+//#region 以下为函数区
 /**
  * 为指定平台执行一次编译
  * @param platform 当前平台的名字
@@ -502,3 +517,4 @@ function writeFeaturesIndex(platform:string){
     //将修改完的内容写进原文件
     File.forceWrite("temp/build/"+platform+"/lib/FeaturesIndex.ts",FeaturesIndex)
 }
+//#endregion
