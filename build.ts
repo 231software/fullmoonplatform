@@ -397,14 +397,12 @@ async function write_tsconfig(platform:string,platform_features:any){
         files,
         compilerOptions: {
             outDir: "js",
-            rootDir: ".",
-            resolveJsonModule: true,
-            downlevelIteration: true,
-            target: platform_features?.tstarget,
-            moduleResolution: "node",
-            // https://www.jianshu.com/p/359c71344084
-            forceConsistentCasingInFileNames:false
+            rootDir: "."
         }
+    }
+    //把compilerOptions合并进tsconfig
+    for(const key in platform_features.compilerOptions){
+        tsconfig.compilerOptions[key]=platform_features.compilerOptions[key]
     }
     await File.forceWrite("temp/build/"+platform+"/tsconfig.json",JSON.stringify(tsconfig));
 }
