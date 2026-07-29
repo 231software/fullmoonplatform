@@ -1,11 +1,13 @@
 {
     "scripts": {
-        "generate":"node gen_dist/generate.js"
+        "generate": "node gen_dist/generate.js"
     },
     "dependencies": {
-        "js-yaml":"^4.1.0",
-        "yaml":"^2.7.0",
-        "ws":"^8.18.0",
-        "typescript":"^5.7.2"
+        "js-yaml": "^4.1.0",
+        "ws": "^8.18.0",
+        "yaml": "^2.7.0"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.2"
     }
 }

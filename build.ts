@@ -35,7 +35,7 @@ lib就是这个模板库
 import {
     FMPDirectory as Directory,
     FMPFile as File,
-    JsonFile
+    JSONFile
 } from "./lib/File.js"
 import {FMPLogger as Logger} from "./lib/Logger.js"
 import * as child_process from "child_process";
@@ -77,17 +77,23 @@ const platforms_featuers=new Map([
 ])
 */
 
-Logger.info("开始构建")
+Logger.info("开始构建");
+
+//因为要异步读取文件，整个脚本被包裹在一个异步函数中
+
+let plugin_conf:any
+
+(async ()=>{
 //读取plugin.json
 /**插件的配置文件，来自`plugin.json` */
-const plugin_conf=JSON.parse(File.read("plugin.json"));
+plugin_conf=JSON.parse(await File.read("plugin.json"));
 
 //根据plugin.json创建输出文件夹
-File.initDir(plugin_conf.build_dir);
+await File.initDir(plugin_conf.build_dir);
 
 //为各平台整理库
 //创建temp文件夹
-File.initDir("temp");
+await File.initDir("temp");
 
 // 将原开发辅助lib放入temp
 // try{
@@ -98,7 +104,7 @@ File.initDir("temp");
 // }
 
 //在temp中创建libs文件夹，放置整理好用于编译的文件夹
-File.initDir("temp/libs")
+await File.initDir("temp/libs")
 
 
 /**本地编译中所有将会得到支持的平台 */
@@ -114,14 +120,14 @@ else{
     //遍历默认顺序中的库，开始移动文件
     for(let lib of defaultPriorities){
         //如果找不到与库名同名的文件夹，则直接跳过
-        if(!File.ls("libs").includes(lib)){
+        if(!(await File.ls("libs")).includes(lib)){
             Logger.error("无法在libs中找到与",lib,"同名的文件夹！您是否忘记了将",lib,"的文件夹放置在libs中，或者是否将它重命名过，或是库名中存在拼写错误？第三方库的库名必须与其文件夹名相同。")
             continue;
         }
         /**将每个文件夹都当作一个平台来整理出的所有当前库支持的平台的列表 */
-        const platforms=(()=>{
+        const platforms=await (async ()=>{
             try{
-                return File.ls("libs/"+lib+"/libs");
+                return await File.ls("libs/"+lib+"/libs");
             }
             catch(e){
                 Logger.error("无法获取库"+lib+"中支持平台列表\n错误原因：\n"+e)
@@ -135,7 +141,7 @@ else{
             //将用于编译的libs文件夹的库复制到temp里，组装成最终要用的libs文件夹
             //所有文件夹合并所有重名文件不替换
             try{
-                File.copy("libs/"+lib+"/libs","temp/libs",{merge:true,skipSameNameFiles:true});
+                await File.copy("libs/"+lib+"/libs","temp/libs",{merge:true,skipSameNameFiles:true});
             }
             catch(e){
                 throw new Error("使用"+lib+"为"+platform+"平台生成编译库时出现错误：\n"+e)
@@ -164,7 +170,7 @@ switch(plugin_conf.supported_platforms.mode){
 
 
 //新建build文件夹
-File.initDir("temp/build")
+await File.initDir("temp/build")
 
 /**编译任务集合，后续程序会等待集合中所有任务完成再继续 */
 const compileTasks:Array<Promise<void>|undefined>=[]
@@ -180,25 +186,25 @@ for(let platform of supported_platforms){
     await Promise.all(compileTasks)
 
     //将所有插件编译结果放到根目录
-    File.initDir(plugin_conf.build_dir)
-    for(let platform of File.ls("temp/build")){
+    await File.initDir(plugin_conf.build_dir)
+    for(let platform of await File.ls("temp/build")){
         //为对应插件平台新建目录
-        File.initDir(plugin_conf.build_dir+"/"+platform)
+        await File.initDir(plugin_conf.build_dir+"/"+platform)
         try{
-            File.rename("temp/build/"+platform+"/js",plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name)
+            await File.rename("temp/build/"+platform+"/js",plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name)
         }
-        catch(e){
+        catch(e:any){
             //Windows下为EPERM，类Unix下为ENOTEMPTY
             if(["EPERM","ENOTEMPTY"].includes(e.code)){
                 //文件夹已存在，用所有已构建出的文件替换掉原有文件
                 //所有被同名替换的文件都是根目录的文件，被替换的文件夹是整个替换
-                for(let builtFile of File.ls("temp/build/"+platform+"/js")){
+                for(let builtFile of await File.ls("temp/build/"+platform+"/js")){
                     //删除原文件
                     //只有目标中有文件时才会删除
-                    if(File.ls(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name).includes(builtFile))File.permanently_delete(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
+                    if((await File.ls(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name)).includes(builtFile))await File.permanentlyDelete(plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
                     
                     //放置新文件
-                    File.rename("temp/build/"+platform+"/js/"+builtFile,plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
+                    await File.rename("temp/build/"+platform+"/js/"+builtFile,plugin_conf.build_dir+"/"+platform+"/"+plugin_conf.plugin_dir_name+"/"+builtFile)
                 }
             }
             else{
@@ -212,7 +218,7 @@ for(let platform of supported_platforms){
         
     }
     //删除temp
-    File.permanently_delete("temp")
+    await File.permanentlyDelete("temp")
 })().then(()=>{
 
 
@@ -224,6 +230,8 @@ Logger.info("构建完成")
 
 
 })
+
+})()
 //#region 脚本末尾
 
 //#endregion
@@ -245,7 +253,7 @@ Logger.info("构建完成")
  * @param platform 当前平台的名字
  * @returns 
  */
-function compile_specified_platform(platform:string){
+async function compile_specified_platform(platform:string){
     
     //以下是新的编译逻辑
     //在temp文件夹
@@ -258,34 +266,34 @@ function compile_specified_platform(platform:string){
     Logger.info("正在为"+platform+"平台构建")
 
     //读取当前平台的特性配置文件
-    if(!File.ls(`temp/libs/${platform}`).includes("platform.json")){
+    if(!(await File.ls(`temp/libs/${platform}`)).includes("platform.json")){
         Logger.error(platform+"不包含platform.json，不会为此平台编译。")
         return
     }
     //当前平台的特性配置文件
-    const platform_features=new JsonFile(`temp/libs/${platform}/platform.json`).rootobj;
+    const platform_features=(await JSONFile.create(`temp/libs/${platform}/platform.json`)).rootobj;
     
 
     //build中新建平台对应文件夹
-    File.initDir("temp/build/"+platform)
+    await File.initDir("temp/build/"+platform)
     
     //把插件源码src复制进去
-    File.copy("src","temp/build/"+platform+"/src")
+    await File.copy("src","temp/build/"+platform+"/src")
 
     //将当前平台的lib文件夹移动到temp/build于构建
-    File.copy("temp/libs/"+platform+"/lib","temp/build/"+platform+"/lib");
+    await File.copy("temp/libs/"+platform+"/lib","temp/build/"+platform+"/lib");
     
 
     //写入tsconfig.json
-    write_tsconfig(platform,platform_features)
+    await write_tsconfig(platform,platform_features)
 
     //写入lib中的index.ts
     //临时方案，由于一些库的index.ts有依赖类型定义的情况，这部分后面再开发，至于这里则是直接采用LNSDK的index.ts，暂时性地所有第三方库的index.ts都必须是LNSDK的子集
-    File.copy("libs/LNSDK/libs/"+platform+"/lib/index.ts","temp/build/"+platform+"/lib/index.ts",{replaceFiles:true})
+    await File.copy("libs/LNSDK/libs/"+platform+"/lib/index.ts","temp/build/"+platform+"/lib/index.ts",{replaceFiles:true})
 
     //写入最外层index.ts
     //这些平台的开服事件并不位于事件系统，需要ScriptDone()触发
-    File.forceWrite("temp/build/"+platform+"/index.ts",`
+    await File.forceWrite("temp/build/"+platform+"/index.ts",`
     import "./${plugin_conf.src_dir}/${plugin_conf.main}.js";
     import {ScriptDone} from "./lib/index.js";
     ${platform_features.require_ScriptDone===true?"ScriptDone();":""}
@@ -295,13 +303,13 @@ function compile_specified_platform(platform:string){
     `)
 
     //写入plugin_info.ts
-    write_plugin_info(platform,platform_features.data_path)
+    await write_plugin_info(platform,platform_features.data_path)
 
     //编写FeaturesIndex.ts
-    writeFeaturesIndex(platform)
+    await writeFeaturesIndex(platform)
 
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    run_lib_scripts(platform,"before_compile.js",plugin_conf)
+    await run_lib_scripts(platform,"before_compile.js",plugin_conf)
 
     //执行编译命令
     //进入编译目录执行命令
@@ -312,13 +320,13 @@ function compile_specified_platform(platform:string){
         const task=child_process.spawn("tsc",[],{shell:true,stdio:['pipe','pipe','pipe']})
         const tscINFO:string[]=[]
         const tscERROR:string[]=[]
-        task.stdout.on('data',chunk=>{
+        task.stdout.on('data',(chunk:any)=>{
             tscINFO.push(chunk.toString())
         })
-        task.stderr.on('data',chunk=>{
+        task.stderr.on('data',(chunk:any)=>{
             tscERROR.push(chunk.toString())
         })
-        task.on("close",code=>{
+        task.on("close",async ()=>{
             if((tscINFO.length==1&&tscINFO[0].length>0)||tscINFO.length>1){
                 Logger.info(platform+"平台编译完成，以下是编译日志")
                 //只有换行符和空格的错误输出就直接跳过了
@@ -334,10 +342,10 @@ function compile_specified_platform(platform:string){
                 //}
             }
             //写入package.json
-            write_package_json(platform,platform_features)
+            await write_package_json(platform,platform_features)
         
             //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-            run_lib_scripts(platform,"after_compile.js",plugin_conf)
+            await run_lib_scripts(platform,"after_compile.js",plugin_conf)
             resolve()
         })
         return null
@@ -368,18 +376,18 @@ function compile_specified_platform(platform:string){
  * 为插件写入plugin_info常量供代码读取
  * @param platform 平台名
  */
-function write_plugin_info(platform:string,plugin_data_path:string){
+async function write_plugin_info(platform:string,plugin_data_path:string){
     //<data_path>是占位符，表示插件定义的data_path，必须位于末尾，未填则会导致插件执行时无视其配置的data_path而完全只采用库定义的路径
     //<data_path>前必须带“/”，后面不能再出现任何字符
     let data_path=plugin_data_path.replace("<data_path>",plugin_conf.data_path)
-    File.forceWrite("temp/build/"+platform+"/lib/plugin_info.ts",`
+    await File.forceWrite("temp/build/"+platform+"/lib/plugin_info.ts",`
 export const INFO=JSON.parse(\`${JSON.stringify(plugin_conf)}\`)
 export const data_path="${data_path}"
 export const PLATFORM="${platform}"
     `);
 }
 
-function write_tsconfig(platform:string,platform_features:any){
+async function write_tsconfig(platform:string,platform_features:any){
     let files:string[]=plugin_conf.files===undefined?[]:plugin_conf.files
     files=files.map(file=>{return plugin_conf.src_dir+"/"+file})
     files.push("index.ts")
@@ -398,11 +406,11 @@ function write_tsconfig(platform:string,platform_features:any){
             forceConsistentCasingInFileNames:false
         }
     }
-    File.forceWrite("temp/build/"+platform+"/tsconfig.json",JSON.stringify(tsconfig));
+    await File.forceWrite("temp/build/"+platform+"/tsconfig.json",JSON.stringify(tsconfig));
 }
 
 /**写入package.json */
-function write_package_json(platform:string,platform_features:any){
+async function write_package_json(platform:string,platform_features:any){
     //如果当前平台有package.json，就根据plugin.json创建package.json
     if(!platform_features?.isNodeJS)return;
     /**package.json的基础的内容 */
@@ -460,12 +468,12 @@ function write_package_json(platform:string,platform_features:any){
     }
 
     //最后写入这个package.json
-    File.forceWrite("temp/build/"+platform+"/js/package.json",JSON.stringify(npm_package,undefined,4))
+    await File.forceWrite("temp/build/"+platform+"/js/package.json",JSON.stringify(npm_package,undefined,4))
 }
 
-function run_lib_scripts(platform:string,file:string,plugin_conf:any){
+async function run_lib_scripts(platform:string,file:string,plugin_conf:any){
     //判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
-    if(!File.ls("temp/libs/"+platform+"/scripts").includes(file))return
+    if(!(await File.ls("temp/libs/"+platform+"/scripts")).includes(file))return
     //用base64向构建脚本发送全部插件元数据
     const AfterCompileScriptTask=child_process.spawnSync(
         "node",
@@ -476,15 +484,16 @@ function run_lib_scripts(platform:string,file:string,plugin_conf:any){
             })).toString("base64")
         ]
     )
-    Logger.info(AfterCompileScriptTask.stdout.toString())
+    const scriptsStdout=AfterCompileScriptTask.stdout.toString()
+    if(scriptsStdout!=="")Logger.info()
     if(AfterCompileScriptTask.stderr){
         Logger.info(AfterCompileScriptTask.stderr.toString())
     }
 }
 
-function writeFeaturesIndex(platform:string){
+async function writeFeaturesIndex(platform:string){
     //读取原文件内容
-    let FeaturesIndex=File.read("temp/build/"+platform+"/lib/FeaturesIndex.ts")
+    let FeaturesIndex=await File.read("temp/build/"+platform+"/lib/FeaturesIndex.ts")
     //第一步：匹配每段feature代码
     const FeaturesCodesRegExpArray=FeaturesIndex.match(/\/\/(\w+)>>(.*?)\/\/\1<</gs)
     let FeaturesCodes:string[]=[]
@@ -515,6 +524,6 @@ function writeFeaturesIndex(platform:string){
         FeaturesIndex=FeaturesIndex.replace(featureExportCode,"\n"+undefinedExportStatement+"\n")
     }
     //将修改完的内容写进原文件
-    File.forceWrite("temp/build/"+platform+"/lib/FeaturesIndex.ts",FeaturesIndex)
+    await File.forceWrite("temp/build/"+platform+"/lib/FeaturesIndex.ts",FeaturesIndex)
 }
 //#endregion

@@ -4,7 +4,10 @@
     "lib": [ "dom", "es5", "es2015.promise" ,"es2015", "es2017"],
     "compilerOptions": {
         "outDir": "./gen_dist",
-        "downlevelIteration": true,
-        "rootDir": "."
-      }   
+        "rootDir": ".",
+        "types":["node"],
+        "target":"es2015",
+        "moduleResolution": "nodenext",
+        "module": "nodenext"
+    }
 }
