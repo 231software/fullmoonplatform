@@ -470,9 +470,11 @@ async function write_package_json(platform:string,platform_features:any){
     }
 
     //最后写入这个package.json
+    //在外面也要写一份，让tsc在编译的时候识别到
     await File.initDir("temp/build/"+platform+"/js")
+    await File.forceWrite("temp/build/"+platform+"/package.json",JSON.stringify(npm_package,undefined,4))
+    //
     await File.forceWrite("temp/build/"+platform+"/js/package.json",JSON.stringify(npm_package,undefined,4))
-    if(!(await File.ls("temp/build/"+platform+"/js")).includes("package.json"))throw new Error("Failed to create package.json! The file doesn't exist in the target location.")
 }
 
 async function run_lib_scripts(platform:string,file:string,plugin_conf:any):Promise<void>{
