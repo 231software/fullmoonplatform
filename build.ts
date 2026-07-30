@@ -32,6 +32,7 @@ lib就是这个模板库
  * 最后把temp中的lib文件夹放回原位
  */
 //import {Directory, File, JsonFile, Logger} from "./lib/index.js"
+import process from "process";
 import {
     FMPDirectory as Directory,
     FMPFile as File,
@@ -39,6 +40,7 @@ import {
 } from "./lib/File.js"
 import {FMPLogger as Logger} from "./lib/Logger.js"
 import * as child_process from "child_process";
+import { Buffer } from "buffer";
 /** 各平台的**特性**配置文件，将来需要独立出去，因为需要供其他开发者修改 */
 
 /*
@@ -308,8 +310,11 @@ async function compile_specified_platform(platform:string){
     //编写FeaturesIndex.ts
     await writeFeaturesIndex(platform)
 
+    //写入package.json(由于typescript需要读取这个配置文件，所以提前)
+    await write_package_json(platform,platform_features)
+
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    await run_lib_scripts(platform,"before_compile.js",plugin_conf)
+    run_lib_scripts(platform,"before_compile.js",plugin_conf)
 
     //执行编译命令
     //进入编译目录执行命令
@@ -317,6 +322,7 @@ async function compile_specified_platform(platform:string){
 
     //将tsc和后续任务包装进Promise
     const compileTaskPromise=new Promise<void>((resolve,reject)=>{
+
         const task=child_process.spawn("tsc",[],{shell:true,stdio:['pipe','pipe','pipe']})
         const tscINFO:string[]=[]
         const tscERROR:string[]=[]
@@ -341,8 +347,6 @@ async function compile_specified_platform(platform:string){
                 for(let line of tscERROR)Logger.error(line)
                 //}
             }
-            //写入package.json
-            await write_package_json(platform,platform_features)
         
             //使用nodejs运行库为当前平台指定的编译后运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
             await run_lib_scripts(platform,"after_compile.js",plugin_conf)
@@ -466,27 +470,43 @@ async function write_package_json(platform:string,platform_features:any){
     }
 
     //最后写入这个package.json
+    await File.initDir("temp/build/"+platform+"/js")
     await File.forceWrite("temp/build/"+platform+"/js/package.json",JSON.stringify(npm_package,undefined,4))
+    if(!(await File.ls("temp/build/"+platform+"/js")).includes("package.json"))throw new Error("Failed to create package.json! The file doesn't exist in the target location.")
 }
 
-async function run_lib_scripts(platform:string,file:string,plugin_conf:any){
+async function run_lib_scripts(platform:string,file:string,plugin_conf:any):Promise<void>{
     //判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
     if(!(await File.ls("temp/libs/"+platform+"/scripts")).includes(file))return
     //用base64向构建脚本发送全部插件元数据
-    const AfterCompileScriptTask=child_process.spawnSync(
-        "node",
-        [
-            "temp/libs/"+platform+"/scripts/"+file,
-            Buffer.from(JSON.stringify({
-                plugin_conf
-            })).toString("base64")
-        ]
-    )
-    const scriptsStdout=AfterCompileScriptTask.stdout.toString()
-    if(scriptsStdout!=="")Logger.info()
-    if(AfterCompileScriptTask.stderr){
-        Logger.info(AfterCompileScriptTask.stderr.toString())
-    }
+    return new Promise(resolve=>{
+        // 1. 使用 fork 替代 spawn
+        // 注意：fork 的第一个参数是脚本路径，第二个参数是命令行参数数组
+        const AfterCompileScriptTask = child_process.fork(
+            "temp/libs/" + platform + "/scripts/" + file,
+            [Buffer.from(JSON.stringify({ plugin_conf })).toString("base64")]
+        );
+
+        // 2. 监听 IPC 消息（子进程内部使用 process.send() 发送的数据）
+        AfterCompileScriptTask.on("message", (msg) => {
+            // 建议在这里处理结构化的数据，比如 JSON 对象
+            Logger.info(":", msg);
+        });
+
+        // 5. 监听进程异常（如找不到脚本文件等）
+        AfterCompileScriptTask.on("error", (err) => {
+            Logger.error("为 " + platform + " 构建时，脚本 " + file + " 运行失败，错误： "+err.message);
+        });
+
+        // 6. 监听进程退出
+        AfterCompileScriptTask.on("exit", (code) => {
+            if (code !== 0) {
+                Logger.error("为 " + platform + " 构建时，脚本 " + file + " 未正常退出，代码 " + code);
+            }
+            resolve();
+        });
+    })
+
 }
 
 async function writeFeaturesIndex(platform:string){
