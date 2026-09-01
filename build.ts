@@ -314,7 +314,8 @@ async function compile_specified_platform(platform:string){
     await write_package_json(platform,platform_features)
 
     //使用nodejs运行库为当前平台指定的编译前运行javascript脚本，该脚本位于每个平台的libs文件夹同级目录
-    run_lib_scripts(platform,"before_compile.js",plugin_conf)
+    //编译前脚本必须等它执行完再开始编译，否则tsc会编译到脚本修改前的旧文件
+    await run_lib_scripts(platform,"before_compile.js",plugin_conf)
 
     //执行编译命令
     //进入编译目录执行命令
@@ -478,8 +479,15 @@ async function write_package_json(platform:string,platform_features:any){
 }
 
 async function run_lib_scripts(platform:string,file:string,plugin_conf:any):Promise<void>{
-    //判断当前是否配置了脚本，如果没有任何脚本文件就直接跳过
-    if(!(await File.ls("temp/libs/"+platform+"/scripts")).includes(file))return
+    //判断当前平台是否配置了脚本，如果不存在scripts目录或没有该脚本文件就直接跳过
+    let scripts:string[]
+    try{
+        scripts=await File.ls("temp/libs/"+platform+"/scripts")
+    }
+    catch(e){
+        return
+    }
+    if(!scripts.includes(file))return
     //用base64向构建脚本发送全部插件元数据
     return new Promise(resolve=>{
         // 1. 使用 fork 替代 spawn
@@ -498,6 +506,8 @@ async function run_lib_scripts(platform:string,file:string,plugin_conf:any):Prom
         // 5. 监听进程异常（如找不到脚本文件等）
         AfterCompileScriptTask.on("error", (err) => {
             Logger.error("为 " + platform + " 构建时，脚本 " + file + " 运行失败，错误： "+err.message);
+            //fork失败时不会触发exit事件，这里主动resolve防止构建挂起
+            resolve();
         });
 
         // 6. 监听进程退出
